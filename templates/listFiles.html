@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<h3> List of Files</h3>
+
+        <ul>
+        {% for f in files %}
+        <li><a href="/getFile/{{f}}">{{f}}</a></li>
+        {% endfor %}
+        </ul>
+
+{% endblock %}

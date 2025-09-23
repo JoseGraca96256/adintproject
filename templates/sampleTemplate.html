@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<h3> List of numbers</h3>
+        <ul>
+        {% for j in numbers %}
+        <li>{{j}}</li>
+        {% endfor %}
+        </ul>
+
+{% endblock %}
