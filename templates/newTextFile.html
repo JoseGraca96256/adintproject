@@ -1,12 +1,17 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-<div>
-   <form action="/" method="post">
-      <p>Enter text to generate QR code:</p>
-      <textarea id="qrText" name="qrText" rows="6" cols="35"></textarea>
-      <br><br>
-      <input type="submit" value="Generate QR Code">
-   </form>
-</div>
-{% endblock %}
+    <div>
+   <form action = "newTextFile" method="post">
+    File Name: 
+    <textarea id="fileName" name="fileName" rows="1" cols="12">
+    </textarea>
+
+    <p>File Content:</p>
+    <textarea id="fileContent" name="fileContent" rows="12" cols="35">
+    </textarea>
+    <p> press the submit button to store the file on the server</p>
+   <input type="submit">
+</form>
+    </div>
+    {% endblock %}

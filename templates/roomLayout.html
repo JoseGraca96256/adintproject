@@ -1,0 +1,26 @@
+<head>
+        
+       
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* two equal columns */
+      gap: 10px;
+    }
+    .column {
+      padding: 10px;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+
+    {% for room, in rooms %}
+    
+
+        <div class="container">
+            <div class="column">{{room.name}}</div>
+            <div class="column">{{room.schedule}}</div>
+        </div>
+    {% endfor %}
+</body>
