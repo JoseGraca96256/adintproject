@@ -134,10 +134,19 @@ def update_menu(restaurantID, newMenu):
 def list_all_restaurants():
     restaurants = listRestaurants()
     result = ''
+    
     for r in restaurants:
-        result += 'id: %d, name: %s, menu: %s, rating: %d\n' % (r.id, r.name, r.menu, r.rating)
-        
+        result += '%s %s %s %d\n' % (str(r.id), r.name, r.menu, r.rating)
+    
     return result
+
+@handler.register
+def get_id_by_name(restaurant_name):
+    restaurant = session.query(Restaurant).filter(Restaurant.name == restaurant_name).first()
+    if restaurant:
+        return restaurant.id
+    else:
+        return "Restaurant not found"
 
 @handler.register
 def show_ratings():

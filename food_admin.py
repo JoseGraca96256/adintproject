@@ -1,8 +1,13 @@
 
+from flask import Flask
+from flask import render_template
+from flask import request, redirect, url_for
+
+import time as t
 from xmlrpc import client
 proxy =client.ServerProxy("http://localhost:5000/api")
 
-
+""" 
 while True:
     print("\nChoose an option:")
     print("1. Create Restaurant")
@@ -29,5 +34,53 @@ while True:
     else:
         print("Invalid choice. Please try again.")
 
+ """
+app = Flask(__name__)
+innit_time = t.time()
 
-   
+class Restaurant:
+    def __init__(self, id, name, menu, rating):
+        self.id = id
+        self.name = name
+        self.menu = menu
+        self.rating = rating
+
+@app.route('/')
+def hello_world():
+    result = proxy.list_all_restaurants()
+
+    rests = []
+    for line in result.strip().split('\n'):
+        id, name, menu, rating = line.split()
+        rests.append(Restaurant(id, name, menu, int(rating)))
+
+    print(rests)
+    return render_template("foodAdminIndex.html",restaurants=rests)
+
+@app.route('/list')
+def list_restaurants():
+    result = proxy.list_all_restaurants()
+
+    rests = []
+    for line in result.strip().split('\n'):
+        id, name, menu, rating = line.split()
+        rests.append(Restaurant(id, name, menu, int(rating)))
+
+    print(rests)
+    return render_template("foodAdminList.html",restaurants=rests)
+
+@app.route('/update')
+def update_restaurant():
+    return render_template("foodAdminUpdateMenu.html")
+
+@app.route("/update_menu", methods=["POST"])
+def update_schedule_form():
+    restaurant_name = request.form.get("name")
+    new_menu = request.form.get("menu")
+    rID = proxy.get_id_by_name(restaurant_name)
+    print(rID)
+    proxy.update_menu(int(rID), new_menu)
+    return redirect(url_for('update_restaurant'))
+    
+if __name__ == "__main__":
+    app.run(port=5003)

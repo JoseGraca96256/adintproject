@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
-
+from flask import request, redirect, url_for
 import datetime
 from sqlalchemy.orm import sessionmaker
 from os import path
@@ -62,8 +62,9 @@ app = Flask(__name__)
 
 @app.route("/index")
 def index():
+    print(listRooms())
     rooms = listRooms()
-    return render_template("roomLayout.html", rooms)  # Ensure the file exists in the templates folder
+    return render_template("roomLayout.html", rooms=rooms)  # Ensure the file exists in the templates folder
 
 handler = XMLRPCHandler('api')
 handler.connect(app, '/api')
@@ -87,7 +88,25 @@ def update_schedule(roomID, newSchedule):
         return "Schedule updated successfully"
     else:
         return "Room not found"
+
+@app.route("/submit_room", methods=["POST"])
+def submit_room():
     
+    room_name = request.form.get("roomName")
+    room_capacity = request.form.get("roomCapacity")
+    room_schedule = request.form.get("roomSchedule")
+    addRoom(name=room_name, capacity=int(room_capacity), schedule=room_schedule)
+    return redirect(url_for('index'))
+
+@app.route("/update_schedule", methods=["POST"])
+def update_schedule_form():
+    room_id = request.form.get("roomID")
+    new_schedule = request.form.get("newSchedule")
+    if updateSchedule(int(room_id), new_schedule):
+        return redirect(url_for('index'))
+    else:
+        return "Room not found", 404
+
 if __name__ == "__main__":
 
     if not db_exists:

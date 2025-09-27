@@ -4,7 +4,7 @@
   <style>
     .container {
       display: grid;
-      grid-template-columns: 1fr 1fr; /* two equal columns */
+      grid-template-columns: 1fr 1fr 1fr; /* two equal columns */
       gap: 10px;
     }
     .column {
@@ -14,12 +14,34 @@
   </style>
 </head>
 <body>
+<h1 style="text-align: center; font-size: 2em;">Room App</h1>
 
-    {% for room, in rooms %}
+<h2>Submit Room</h2>
+<form action="/submit_room" method="post">
+  <label for="roomName">Room Name:</label>
+  <input type="text" id="roomName" name="roomName" required>
+  <label for="roomCapacity">Room Capacity:</label>
+  <input type="number" id="roomCapacity" name="roomCapacity" required>
+  <label for="roomSchedule">Room Schedule:</label>
+  <input type="text" id="roomSchedule" name="roomSchedule" required>
+  <button type="submit">Add Room</button>
+</form>
+
+<h2>Update Schedule</h2>
+<form action="/update_schedule" method="post">  
+  <label for="roomName">room:</label>
+  <input type="text" id="roomID" name="roomID" required>
+  <label for="schedule">schedul:</label>
+  <input type="text" id="newSchedule" name="newSchedule" required>
+  <button type="submit">Add Room</button>
+</form>
+
+    {% for room in rooms %}
     
 
         <div class="container">
             <div class="column">{{room.name}}</div>
+            <div class="column">{{room.capacity}}</div>
             <div class="column">{{room.schedule}}</div>
         </div>
     {% endfor %}
