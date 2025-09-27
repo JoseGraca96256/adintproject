@@ -1,0 +1,30 @@
+{% extends "foodAdminIndex.html" %}
+
+{% block content %}
+
+<!--
+  <h2>Submit Food</h2>
+  <form action="/submit_food" method="post">
+    <label for="foodName">Food Name:</label>
+    <input type="text" id="foodName" name="foodName" required>
+    <label for="foodType">Food Type:</label>
+    <input type="text" id="foodType" name="foodType" required>
+    <label for="foodPrice">Food Price:</label>
+    <input type="number" id="foodPrice" name="foodPrice" required>
+    <button type="submit">Add Food</button>
+  </form>
+ -->
+<h2>Add Restaurant</h2>
+<form action="/addRestaurant" method="post">  
+  <label for="name">Restaurant Name:</label>
+  <input type="text" id="name" name="name" required>
+  <label for="menu">Menu:</label>
+  <input type="text" id="menu" name="menu" required></textarea>
+  <label for="reservations">reservations:</label>
+  <input type="number" id="reservations" name="reservations" required>
+  <label for="rating">Rating:</label>
+  <input type="number" id="rating" name="rating" required>
+  <button type="submit">Add Restaurant</button>
+</form>
+
+{% endblock %}

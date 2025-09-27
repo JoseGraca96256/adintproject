@@ -1,0 +1,34 @@
+{% extends "foodAdminIndex.html" %}
+{% block extra_head %}
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr ; /* three equal columns */
+      gap: 10px;
+    }
+    .column {
+      padding: 10px;
+      border: 1px solid black;
+    }
+  </style>
+
+{% endblock %}
+{% block content %}
+
+<h2>All Restaurants</h2>
+There are {{restaurants|length}} restaurants listed.
+  <div class="container">
+    <div class="column"><strong>Name</strong></div>
+    <div class="column"><strong>Rating</strong></div>
+  
+  </div>
+{% for restaurant in restaurants %}
+  <div class="container">
+
+    <div class="column">{{ restaurant.name }}</div>
+    <div class="column">{{ restaurant.rating }}</div>
+  </div>
+{% endfor %}
+
+
+{% endblock %}

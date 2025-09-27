@@ -1,4 +1,45 @@
 <head>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #fff;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: rgba(0,0,0,0.75);   /* semi-transparent instead of solid black */
+      backdrop-filter: blur(6px);      /* gives a modern frosted effect */
+      padding: 0.8rem 2rem;
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      justify-content: center;         /* center align links */
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid rgba(255,255,255,0.2); /* subtle separation */
+    }
+
+    .topbar a {
+      color: #fdfdfd;
+      text-decoration: none;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+    }
+
+    .topbar a:hover {
+      background: rgba(255,255,255,0.15);
+      color: #ff9800;
+    }
+  </style>
+
+
+
   <style>
     .container {
       display: grid;
@@ -24,6 +65,9 @@
     background-attachment: fixed; /* optional: parallax-like effect */
   }
 </style>
+{% block extra_head %}{% endblock %}
+
+
 </head>
 <body>
 <h1 style="text-align: center; font-size: 2em;">Food Admin App</h1>
@@ -42,10 +86,12 @@
 
 
 <h2>Navigation</h2>
-<nav>
-  <a href="/list">View Food List</a> |
+<div class="topbar">
+  <a href="/list">View Food List</a>
   <a href="/update">Update Food</a>
-</nav>
+  <a href="/add">Add Restaurant</a>
+  <a href="/showRating">Ratings</a>
+</div>
 
 {% block content %}
 {% endblock %}

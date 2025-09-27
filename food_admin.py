@@ -69,6 +69,23 @@ def list_restaurants():
     print(rests)
     return render_template("foodAdminList.html",restaurants=rests)
 
+
+@app.route('/add')
+def add_rest():
+    return render_template("foodAdminAddRestaurant.html")
+
+@app.route("/addRestaurant", methods=["POST"])
+def submit_restaurant():
+    restaurant_name = request.form.get("name")
+    restaurant_menu = request.form.get("menu")
+    restaurant_reservation = request.form.get("reservations")
+    restaurant_rating = request.form.get("rating")
+    proxy.add_restaurant(restaurant_name, int(restaurant_reservation), restaurant_menu, int(restaurant_rating))
+    print('done')
+    return redirect(url_for('add_rest'))
+
+
+
 @app.route('/update')
 def update_restaurant():
     return render_template("foodAdminUpdateMenu.html")
@@ -82,5 +99,16 @@ def update_schedule_form():
     proxy.update_menu(int(rID), new_menu)
     return redirect(url_for('update_restaurant'))
     
+@app.route('/showRating')
+def show_ratings():
+    result = proxy.list_all_restaurants()
+    print(result)
+    rests = []
+    for line in result.strip().split('\n'):
+        id, name, menu, rating = line.split()
+        rests.append(Restaurant(id, name, menu, int(rating)))
+    return render_template("foodAdminShowRatings.html",restaurants=rests)
+
+
 if __name__ == "__main__":
     app.run(port=5003)
