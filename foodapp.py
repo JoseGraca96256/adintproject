@@ -53,9 +53,10 @@ def getRestaurant(restaurantID):
     return session.query(Restaurant).filter(Restaurant.id == restaurantID).first()
 
 def addRestaurant(name, reservations, menu, rating):
-    restaurant = Restaurant(name=name, reservations=reservations, menu=menu, rating=rating)
-    session.add(restaurant)
-    session.commit()
+    if  not getRestaurantByName(name):
+        restaurant = Restaurant(name=name, reservations=reservations, menu=menu, rating=rating)
+        session.add(restaurant)
+        session.commit()
 
 def updateReservations(restaurantID, newReservations):
     restaurant = getRestaurant(restaurantID)
@@ -68,6 +69,9 @@ def updateMenu(restaurantID, newMenu):
     if restaurant:
         restaurant.menu = newMenu
         session.commit()
+
+def getRestaurantByName(restaurantName):
+    return session.query(Restaurant).filter(Restaurant.name == restaurantName).first()
 
 
 
@@ -178,7 +182,7 @@ if __name__ == "__main__":
     busyRestaurants = session.query(Restaurant).filter(Restaurant.reservations > 10).all()
     for r in busyRestaurants:
         print(r.id, r.name, r.reservations, r.menu)
-    app.run()
+    app.run(port=5000, debug=True)
 
     
 

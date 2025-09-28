@@ -58,7 +58,7 @@
     margin: 0;
   }
   body {
-    background-image:url("{{ url_for('static', filename='img/food_bg.jpg') }}");
+    background-image:url("{{ url_for('static', filename='img/room_bg.jpg') }}");
     background-repeat: no-repeat;
     background-position: center center;
     background-size: cover;       /* scale to cover viewport */
@@ -70,7 +70,8 @@
 
 </head>
 <body>
-<h1 style="text-align: center; font-size: 2em;">Food Admin App</h1>
+<div style="height:20px;"></div>
+<h1 style="text-align: center; font-size: 2em;">Room Admin App</h1>
 <!-- 
   <h2>Submit Food</h2>
   <form action="/submit_food" method="post">
@@ -85,11 +86,11 @@
  -->
 
 
+
 <div class="topbar">
-  <a href="/list">View Food List</a>
-  <a href="/update">Update Food</a>
-  <a href="/add">Add Restaurant</a>
-  <a href="/showRating">Ratings</a>
+  <a href="/createRoom">Create Room</a>
+  <a href="/list">List Room</a>
+  <a href="/updateSchedule">Update Schedule </a>
 </div>
 
 {% block content %}

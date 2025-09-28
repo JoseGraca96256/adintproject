@@ -1,0 +1,35 @@
+
+{% extends "roomAdminIndex.html" %}
+<!-- <head>
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr; /* three equal columns */
+      gap: 10px;
+    }
+    .column {
+      padding: 10px;
+      border: 1px solid black;
+    }
+  </style>
+</head> -->
+
+{% block content %}
+
+<h2>All Rooms</h2>
+There are {{ rooms|length }} rooms registered.
+<div class="container">
+  <div class="column"><strong>Name</strong></div>
+  <div class="column"><strong>Capacity</strong></div>
+  <div class="column"><strong>Schedule</strong></div>
+</div>
+{% for room in rooms %}
+<div class="container">
+  <div class="column">{{ room.name }}</div>
+  <div class="column">{{ room.capacity }}</div>
+  <div class="column">{{ room.schedule }}</div>
+</div>
+{% endfor %}
+
+
+{% endblock %}

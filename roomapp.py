@@ -45,10 +45,14 @@ def listRooms():
 def getRoom(roomID):
     return session.query(Room).filter(Room.id == roomID).first()
 
+def getRoomByName(roomName):
+    return session.query(Room).filter(Room.name == roomName).first()
+
 def addRoom(name, capacity, schedule):
-    room = Room(name=name, capacity=capacity, schedule=schedule)
-    session.add(room)
-    session.commit()
+    if  not getRoomByName(name):
+        room = Room(name=name, capacity=capacity, schedule=schedule)
+        session.add(room)
+        session.commit()
 
 def updateSchedule(roomID, newSchedule):
     room = getRoom(roomID)
@@ -79,12 +83,14 @@ def list_all_rooms():
     rooms = listRooms()
     result = ''
     for r in rooms:
-        result += 'id: %d, name: %s, capacity: %d, schedule: %s\n' % (r.id, r.name, r.capacity, r.schedule)
+        result += '%s %s %s %s\n' % (str(r.id), r.name, str(r.capacity), r.schedule)
     return result
 
 @handler.register
-def update_schedule(roomID, newSchedule):
-    if updateSchedule(int(roomID), newSchedule):
+def update_schedule(roomName, newSchedule):
+    room = getRoomByName(roomName)
+    if room:
+        updateSchedule(int(room.id), newSchedule)
         return "Schedule updated successfully"
     else:
         return "Room not found"
@@ -102,7 +108,7 @@ def submit_room():
 def update_schedule_form():
     room_id = request.form.get("roomID")
     new_schedule = request.form.get("newSchedule")
-    if updateSchedule(int(room_id), new_schedule):
+    if updateSchedule(name, new_schedule):
         return redirect(url_for('index'))
     else:
         return "Room not found", 404
@@ -115,6 +121,6 @@ if __name__ == "__main__":
         addRoom(name="1.2", capacity=30, schedule="10-18")
         addRoom(name="1.3", capacity=22, schedule="10-18")
     
-    app.run(port=5001)
+    app.run(port=5001, debug=True)
 
         

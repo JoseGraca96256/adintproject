@@ -1,0 +1,14 @@
+{% extends "roomAdminIndex.html" %}
+
+{% block content %}
+<h2>Update Room Schedule</h2>
+<form action="/update_room_schedule" method="post">
+  <label for="roomName">Room Name:</label>
+  <input type="text" id="roomName" name="room_name" required>
+
+  <label for="schedule">New Schedule:</label>
+  <input type="text" id="schedule" name="schedule" >
+
+  <button type="submit">Update Schedule</button>
+</form>
+{% endblock %}
