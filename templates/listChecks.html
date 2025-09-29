@@ -1,0 +1,37 @@
+{% block content %}
+  <h2>List Check-ins/Check-outs</h2>
+
+  <!-- Form to request a username -->
+  <form method="post" action="/listcheck">
+    <label for="username">Enter Username:</label>
+    <input type="text" id="username" name="username" required>
+    <button type="submit">Show Records</button>
+  </form>
+
+  <!-- Only show results if checks exist -->
+  {% if checks %}
+    <h3>Results for "{{ request.form.get('username') }}":</h3>
+    <table border="1" cellpadding="6" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in checks %}
+          <tr>
+            <td>{{ c.username }}</td>
+            <td>{{ c.location }}</td>
+            <td>{{ c.spec }}</td>
+            <td>{{ c.date }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% elif checks is defined %}
+    <p>No records found for "{{ request.form.get('username') }}".</p>
+  {% endif %}
+{% endblock %}

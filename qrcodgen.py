@@ -7,7 +7,7 @@ app = Flask(__name__)
 @app.route("/", methods=["GET", "POST"])
 def generate_qr():
     if request.method == "GET":
-        return render_template("newTextFile.html")
+        return render_template("qrcode.html")
     else:
         # Get user input
         text = request.form["qrText"]
