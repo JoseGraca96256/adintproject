@@ -61,10 +61,14 @@ session = Session()
 
 app = Flask(__name__)
 
+@app.route("/")
+def index():
+    return render_template("checkIndex.html")
+
 @app.route("/checkin", methods=["GET", "POST"])
 def checkIn():
     if request.method == "GET":
-        return render_template("registerCheckIn.html")
+        return render_template("checkInAdd.html")
     else:
         # Add check in to database
         addCheckIn()
@@ -73,7 +77,7 @@ def checkIn():
 @app.route("/checkout", methods=["GET", "POST"])
 def checkOut():
     if request.method == "GET":
-        return render_template("registerCheckOut.html")
+        return render_template("checkOutAdd.html")
     else:
         # Add check out to database
         addCheckOut()
@@ -83,9 +87,9 @@ def checkOut():
 @app.route("/listcheck", methods=["GET", "POST"])
 def listcheck():
     if request.method == "GET":
-        return render_template("listChecks.html")    
+        return render_template("checkList.html")    
     else:
-        return render_template("listChecks.html", checks=listChecks())
+        return render_template("checkList.html", checks=listChecks())
     
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8001, debug=True)

@@ -1,0 +1,14 @@
+{% extends "checkInLayout.html" %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+  <h1 class="mb-4">🏠 Welcome to the Check System</h1>
+  <p class="lead">Choose an action below:</p>
+
+  <div class="d-flex justify-content-center gap-3 mt-4">
+    <a href="/checkin" class="btn btn-success btn-lg">✅ Check In</a>
+    <a href="/checkout" class="btn btn-danger btn-lg">🚪 Check Out</a>
+    <a href="/listcheck" class="btn btn-primary btn-lg">📋 View Records</a>
+  </div>
+</div>
+{% endblock %}

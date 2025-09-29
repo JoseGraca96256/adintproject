@@ -1,13 +1,18 @@
+{% extends "checkInLayout.html" %}
+
+{% block content %}
 
 <div>
-   <h2>Check In</h2>
+   <h2>Check Out</h2>
    <hr>
    <br>
-   <form action="/checkin" method="post">
+   <form action="/checkout" method="post">
       <label for="username">Username:</label>
       <input type="text" id="username" name="username" required>
       <label for="room">Location (Room or Restaurant):</label>
       <input type="text" id="Location" name="Location" required>
-      <button type="submit">Check In</button>
+      <button type="submit">Check Out</button>
    </form>
 </div>
+
+{% endblock %}

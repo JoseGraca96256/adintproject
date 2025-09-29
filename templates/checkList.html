@@ -1,3 +1,5 @@
+{% extends "checkInLayout.html" %}
+
 {% block content %}
   <h2>List Check-ins/Check-outs</h2>
 
@@ -10,6 +12,7 @@
 
   <!-- Only show results if checks exist -->
   {% if checks %}
+    <br>
     <h3>Results for "{{ request.form.get('username') }}":</h3>
     <table border="1" cellpadding="6" cellspacing="0">
       <thead>
