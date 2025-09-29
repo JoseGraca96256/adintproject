@@ -28,7 +28,8 @@ session = Session()
 
 # Data access helpers
 def listMessages():
-    return session.query(Message).order_by(Message.id.desc()).all()
+    username = request.form.get("username")
+    return session.query(Message).filter(Message.sender == username).order_by(Message.id.desc()).all()
 
 def getMessage(messageID):
     return session.query(Message).filter(Message.id == messageID).first()
@@ -80,10 +81,14 @@ def add_message():
     addMessage(sender, receiver, content)
     return redirect(url_for('send_message_form'))
 
-@app.route('/inbox')
+@app.route('/inbox', methods=["GET", "POST"])
 def inbox():
-    messages = listMessages()
-    return render_template("messageAppInbox.html", messages=messages)
+    if request.method == "POST":
+        messages = listMessages()
+        return render_template("messageAppInbox.html", messages=messages)
+    else:
+        all_messages = session.query(Message).all()
+        return render_template("messageAppInbox.html", messages=all_messages)
 
 @app.route('/sendMessage')
 def send_message_form():

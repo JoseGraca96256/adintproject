@@ -1,36 +1,43 @@
 {% extends "messageAppIndex.html" %}
-<!-- <head>
-  <style>
-    .container {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr; /* three equal columns */
-      gap: 10px;
-    }
-    .column {
-      padding: 10px;
-      border: 1px solid black;
-    }
-  </style>
-</head> -->
 
 {% block content %}
+<h2 class="mb-3">📥 Inbox</h2>
 
-<h2>All Messages</h2>
-There are {{messages|length}} messages listed.
-  <div class="container">
-    <div class="column"><strong>sender</strong></div>
-    <div class="column"><strong>Receiver</strong></div>
-    <div class="column"><strong>Message</strong></div>
-  
+<!-- Filter form -->
+<form method="post" action="/inbox" class="row g-3 mb-4">
+  <div class="col-md-6">
+    <input type="text" name="username" class="form-control" placeholder="Filter by username">
   </div>
-{% for message in messages %}
-  <div class="container">
-
-    <div class="column">{{ message.sender }}</div>
-    <div class="column">{{ message.receiver }}</div>
-    <div class="column">{{ message.content }}</div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary w-100">Filter</button>
   </div>
-{% endfor %}
+</form>
 
-
+<!-- Messages -->
+{% if messages %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Sender</th>
+          <th>Receiver</th>
+          <th>Message</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in messages %}
+        <tr>
+          <td>{{ m.sender }}</td>
+          <td>{{ m.receiver }}</td>
+          <td>{{ m.content }}</td>
+          <td>{{ m.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="alert alert-info">No messages found.</div>
+{% endif %}
 {% endblock %}
