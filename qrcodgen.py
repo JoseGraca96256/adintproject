@@ -7,7 +7,7 @@ app = Flask(__name__)
 @app.route("/", methods=["GET", "POST"])
 def generate_qr():
     if request.method == "GET":
-        return render_template("qrcode.html")
+        return render_template("QRcode.html")
     else:
         # Get user input
         text = request.form["qrText"]
@@ -30,4 +30,4 @@ def generate_qr():
         return send_file(img_io, mimetype='image/png')
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8001, debug=True)

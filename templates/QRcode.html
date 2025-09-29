@@ -1,0 +1,29 @@
+{% extends 'QRcodeLayout.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-lg">
+        <div class="card-header text-center bg-primary text-white">
+          <h4>📱 QR Code Generator</h4>
+        </div>
+        <div class="card-body">
+          <form action="/" method="post">
+            <div class="mb-3">
+              <label for="qrText" class="form-label">Enter text:</label>
+              <textarea id="qrText" name="qrText" class="form-control" rows="2" placeholder="Type your text here..." required></textarea>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">Generate QR Code</button>
+            </div>
+          </form>
+        </div>
+        <div class="card-footer text-muted text-center">
+          Your text will be instantly converted into a scannable QR code.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
