@@ -73,8 +73,24 @@ def updateMenu(restaurantID, newMenu):
 def getRestaurantByName(restaurantName):
     return session.query(Restaurant).filter(Restaurant.name == restaurantName).first()
 
-
-
+def removeRestaurantByName(name):
+    restaurant = (session.query(Restaurant)
+                  .filter(Restaurant.name == name)
+                  .order_by(Restaurant.id.desc())
+                  .first())
+    if restaurant:
+        session.delete(restaurant)
+        session.commit()
+        return True
+    return False
+    
+def removeRestaurant(restaurantID):
+    restaurant = getRestaurant(restaurantID)
+    if restaurant:
+        session.delete(restaurant)
+        session.commit()
+        return True
+    return False
 
 """ 
 def getBooksfromAuthor(authorID):
@@ -102,8 +118,17 @@ app = Flask(__name__)
 innit_time = t.time()
 @app.route('/')
 def hello_world():
-    return render_template("index.html")
+    restaurants = listRestaurants()
+    return render_template("foodAppIndex.html", restaurants=restaurants)  
  
+@app.route('/restaurant/<int:restId>')
+def restaurant_detail(restId):
+    restaurant = getRestaurant(restId)
+    if restaurant:
+        return render_template("foodAppRestDetails.html", restaurant=restaurant)
+    else:
+        return "Restaurant not found", 404
+
 handler = XMLRPCHandler('api')
 handler.connect(app, '/api')
 
@@ -160,6 +185,20 @@ def show_ratings():
         result += ' name: %s, rating: %d\n' % ( r.name, r.rating)
     return result
 
+@handler.register
+def remove_restaurant_by_name(name):
+    if removeRestaurantByName(name):
+        return "Restaurant removed successfully"
+    else:
+        return "Restaurant not found"
+    
+@handler.register
+def remove_restaurant_by_id(restaurantID):
+    if removeRestaurant(restaurantID):
+        return "Restaurant removed successfully"
+    else:
+        return "Restaurant not found"
+
 if __name__ == "__main__":
     
     if not db_exists:
@@ -167,13 +206,6 @@ if __name__ == "__main__":
         addRestaurant("india", 0, "tikamassala",4)
         addRestaurant("sushi", 15, "sashimi",5)
 
-    """ 
-    #queries
-    print("\nall restaurants")
-    lRestaurants = session.query(Restaurant).all()
-    print(lRestaurants)
-    print(listRestaurants())
- """
     print("\nall restaurants")
     lRestaurants = session.query(Restaurant).all()
     print(lRestaurants)

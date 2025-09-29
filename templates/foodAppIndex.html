@@ -43,12 +43,12 @@
   <style>
     .container {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 2fr;; /* three equal columns */
+      grid-template-columns: 1fr 1fr 1fr 2fr; /* three equal columns */
       gap: 10px;
     }
     .column {
       padding: 10px;
-      border: 1px solid black;
+      border: none;
     }
   </style>
   <style>
@@ -69,8 +69,11 @@
 
 
 </head>
-<body>
-<h1 style="text-align: center; font-size: 2em;">Food Admin App</h1>
+<body style="padding-top:20px;">
+<h1 style="text-align:center; font-size:2em; margin:0;">
+  <a href="/" style="color:inherit; text-decoration:none;">Food App</a>
+</h1>
+
 <!-- 
   <h2>Submit Food</h2>
   <form action="/submit_food" method="post">
@@ -84,15 +87,20 @@
   </form>
  -->
 
-
-<div class="topbar">
-  <a href="/list">View Food List</a>
-  <a href="/update">Update Food</a>
-  <a href="/add">Add Restaurant</a>
-  <a href="/showRating">Ratings</a>
-</div>
-
 {% block content %}
+
+{% for restaurant in restaurants %}
+  <div class="container">
+
+    <div class="column">
+      <a href="{{ url_for('restaurant_detail', restId=restaurant.id) }}" style="font-weight:700; color:#000; text-decoration:none; padding:0 30px;">{{ restaurant.name }}</a>
+    </div>
+    
+  </div>
+{% endfor %}
+
+
+
 {% endblock %}
 
 <!-- 
