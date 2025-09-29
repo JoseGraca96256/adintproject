@@ -1,0 +1,14 @@
+{% extends "messageAppIndex.html" %}
+
+{% block content %}
+<h2>Send Message</h2>
+<form method="post" action="/send">
+    <label for="sender">Sender:</label>
+    <input type="text" id="sender" name="sender" required>
+    <label for="receiver">Receiver:</label>
+    <input type="text" id="receiver" name="receiver" required>
+    <label for="content">Message:</label>
+    <textarea id="content" name="content" required></textarea>
+    <button type="submit">Send</button>
+</form>
+{% endblock %}

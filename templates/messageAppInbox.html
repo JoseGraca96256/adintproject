@@ -1,0 +1,36 @@
+{% extends "messageAppIndex.html" %}
+<!-- <head>
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr; /* three equal columns */
+      gap: 10px;
+    }
+    .column {
+      padding: 10px;
+      border: 1px solid black;
+    }
+  </style>
+</head> -->
+
+{% block content %}
+
+<h2>All Messages</h2>
+There are {{messages|length}} messages listed.
+  <div class="container">
+    <div class="column"><strong>sender</strong></div>
+    <div class="column"><strong>Receiver</strong></div>
+    <div class="column"><strong>Message</strong></div>
+  
+  </div>
+{% for message in messages %}
+  <div class="container">
+
+    <div class="column">{{ message.sender }}</div>
+    <div class="column">{{ message.receiver }}</div>
+    <div class="column">{{ message.content }}</div>
+  </div>
+{% endfor %}
+
+
+{% endblock %}

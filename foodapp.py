@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, Float
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -11,6 +11,7 @@ from os import path
 from flask import Flask
 from flask import render_template
 from flask_xmlrpcre.xmlrpcre import *
+from flask import request, redirect, url_for
 import time as t
 
 
@@ -32,10 +33,11 @@ class Restaurant(Base):
     name = Column(String)
     reservations = Column(Integer) 
     menu= Column(String)
-    rating = Column(Integer)
+    rating = Column(Float, default=0)
+    number_of_ratings = Column(Integer, default=0)
     def __repr__(self):
-        return "<Restaurant(id=%d name='%s', reservations='%d', menu='%s', rating='%d')>" % (
-                                self.id, self.name, self.reservations, self.menu, self.rating)
+        return "<Restaurant(id=%d name='%s', reservations='%d', menu='%s', rating='%f',number_of_ratings='%d')>" % (
+                                self.id, self.name, self.reservations, self.menu, self.rating, self.number_of_ratings)
     
 
 
@@ -46,7 +48,6 @@ session = Session()
 
 
 def listRestaurants():
-    rating = Column(Integer)
     return session.query(Restaurant).all()
 
 def getRestaurant(restaurantID):
@@ -129,6 +130,20 @@ def restaurant_detail(restId):
     else:
         return "Restaurant not found", 404
 
+@app.route('/rate', methods=["POST"])
+@app.route('/rate', methods=["POST"])
+def rate_restaurant():
+    rest_id = int(request.form.get("restId"))
+    new_rating = int(request.form.get("rating"))
+    restaurant = getRestaurant(rest_id)
+    if restaurant:
+        total = restaurant.rating * restaurant.number_of_ratings + new_rating
+        restaurant.number_of_ratings += 1
+        restaurant.rating = total / restaurant.number_of_ratings
+        session.commit()
+        return redirect(url_for('restaurant_detail', restId=rest_id))
+    else:
+        return "Restaurant not found", 404
 handler = XMLRPCHandler('api')
 handler.connect(app, '/api')
 
@@ -160,15 +175,15 @@ def update_menu(restaurantID, newMenu):
     return "Menu updated successfully"
 
 @handler.register
+@handler.register
 def list_all_restaurants():
     restaurants = listRestaurants()
     result = ''
     
     for r in restaurants:
-        result += '%s %s %s %d\n' % (str(r.id), r.name, r.menu, r.rating)
+        result += '%s %s %s %.2f\n' % (str(r.id), r.name, r.menu, r.rating)
     
     return result
-
 @handler.register
 def get_id_by_name(restaurant_name):
     restaurant = session.query(Restaurant).filter(Restaurant.name == restaurant_name).first()
@@ -178,13 +193,13 @@ def get_id_by_name(restaurant_name):
         return "Restaurant not found"
 
 @handler.register
+@handler.register
 def show_ratings():
     restaurants = listRestaurants()
     result = ''
     for r in restaurants:
-        result += ' name: %s, rating: %d\n' % ( r.name, r.rating)
+        result += ' name: %s, rating: %.2f\n' % ( r.name, r.rating)
     return result
-
 @handler.register
 def remove_restaurant_by_name(name):
     if removeRestaurantByName(name):

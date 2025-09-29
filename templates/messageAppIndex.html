@@ -1,0 +1,91 @@
+<head>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #fff;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: rgba(0,0,0,0.75);   /* semi-transparent instead of solid black */
+      backdrop-filter: blur(6px);      /* gives a modern frosted effect */
+      padding: 0.8rem 2rem;
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      justify-content: center;         /* center align links */
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid rgba(255,255,255,0.2); /* subtle separation */
+    }
+
+    .topbar a {
+      color: #fdfdfd;
+      text-decoration: none;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+    }
+
+    .topbar a:hover {
+      background: rgba(255,255,255,0.15);
+      color: #ff9800;
+    }
+  </style>
+
+
+
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 2fr; /* three equal columns */
+      gap: 10px;
+    }
+    .column {
+      padding: 10px;
+      border: none;
+    }
+  </style>
+  <style>
+  /* Best default: full-screen responsive background */
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background-image:url("{{ url_for('static', filename='img/message_bg.jpg') }}");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;       /* scale to cover viewport */
+    background-attachment: fixed; /* optional: parallax-like effect */
+  }
+</style>
+{% block extra_head %}{% endblock %}
+
+
+</head>
+<body style="padding-top:20px;">
+<h1 style="text-align:center; font-size:2em; margin:0;">
+  <a href="/" style="color:inherit; text-decoration:none;">Food App</a>
+</h1>
+
+
+<div class="topbar">
+  <a href="/sendMessage">Send Message</a>
+  <a href="/inbox">Inbox</a>
+  
+</div>
+
+
+
+{% block content %}
+
+
+{% endblock %}
+
+</body>
