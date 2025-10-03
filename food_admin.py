@@ -52,7 +52,7 @@ def hello_world():
     rests = []
     for line in result.strip().split('\n'):
         id, name, menu, rating = line.split()
-        rests.append(Restaurant(id, name, menu, int(rating)))
+        rests.append(Restaurant(id, name, menu, float(rating)))
 
     print(rests)
     return render_template("foodAdminIndex.html",restaurants=rests)
@@ -64,7 +64,7 @@ def list_restaurants():
     rests = []
     for line in result.strip().split('\n'):
         id, name, menu, rating = line.split()
-        rests.append(Restaurant(id, name, menu, int(rating)))
+        rests.append(Restaurant(id, name, menu, float(rating)))
 
     print(rests)
     return render_template("foodAdminList.html",restaurants=rests)
@@ -80,7 +80,7 @@ def submit_restaurant():
     restaurant_menu = request.form.get("menu")
     restaurant_reservation = request.form.get("reservations")
     restaurant_rating = request.form.get("rating")
-    proxy.add_restaurant(restaurant_name, int(restaurant_reservation), restaurant_menu, int(restaurant_rating))
+    proxy.add_restaurant(restaurant_name, int(restaurant_reservation), restaurant_menu, float(restaurant_rating))
     print('done')
     return redirect(url_for('add_rest'))
 
@@ -95,7 +95,8 @@ def update_schedule_form():
     restaurant_name = request.form.get("name")
     new_menu = request.form.get("menu")
     rID = proxy.get_id_by_name(restaurant_name)
-    print(rID)
+    if rID == -1:
+        redirect(url_for('update_restaurant'))
     proxy.update_menu(int(rID), new_menu)
     return redirect(url_for('update_restaurant'))
     
@@ -106,7 +107,7 @@ def show_ratings():
     rests = []
     for line in result.strip().split('\n'):
         id, name, menu, rating = line.split()
-        rests.append(Restaurant(id, name, menu, int(rating)))
+        rests.append(Restaurant(id, name, menu, float(rating)))
     return render_template("foodAdminShowRatings.html",restaurants=rests)
 
 

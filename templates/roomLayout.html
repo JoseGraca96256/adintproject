@@ -12,10 +12,26 @@
       border: 1px solid black;
     }
   </style>
+  <style>
+  /* Best default: full-screen responsive background */
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background-image:url("{{ url_for('static', filename='img/room_bg.jpg') }}");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;       /* scale to cover viewport */
+    background-attachment: fixed; /* optional: parallax-like effect */
+  }
+</style>
+
+
 </head>
 <body>
 <h1 style="text-align: center; font-size: 2em;">Room App</h1>
-
+<!-- 
 <h2>Submit Room</h2>
 <form action="/submit_room" method="post">
   <label for="roomName">Room Name:</label>
@@ -35,7 +51,7 @@
   <input type="text" id="newSchedule" name="newSchedule" required>
   <button type="submit">Add Room</button>
 </form>
-
+ -->
     {% for room in rooms %}
     
 

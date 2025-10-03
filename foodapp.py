@@ -174,7 +174,8 @@ def update_menu(restaurantID, newMenu):
     updateMenu(restaurantID, newMenu)
     return "Menu updated successfully"
 
-@handler.register
+
+
 @handler.register
 def list_all_restaurants():
     restaurants = listRestaurants()
@@ -190,9 +191,9 @@ def get_id_by_name(restaurant_name):
     if restaurant:
         return restaurant.id
     else:
-        return "Restaurant not found"
+        return -1
 
-@handler.register
+
 @handler.register
 def show_ratings():
     restaurants = listRestaurants()
@@ -200,6 +201,7 @@ def show_ratings():
     for r in restaurants:
         result += ' name: %s, rating: %.2f\n' % ( r.name, r.rating)
     return result
+
 @handler.register
 def remove_restaurant_by_name(name):
     if removeRestaurantByName(name):

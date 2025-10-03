@@ -64,7 +64,7 @@ def updateSchedule(roomID, newSchedule):
 
 app = Flask(__name__)
 
-@app.route("/index")
+@app.route("/")
 def index():
     print(listRooms())
     rooms = listRooms()
