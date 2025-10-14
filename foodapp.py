@@ -3,12 +3,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Date, Float
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from flask import Flask, jsonify
 
 import datetime
 from sqlalchemy.orm import sessionmaker
 from os import path
 
-from flask import Flask
 from flask import render_template
 from flask_xmlrpcre.xmlrpcre import *
 from flask import request, redirect, url_for
@@ -215,6 +215,19 @@ def remove_restaurant_by_id(restaurantID):
         return "Restaurant removed successfully"
     else:
         return "Restaurant not found"
+
+
+#project 2 - REST API
+
+
+@app.route('/api/restaurant/<string:restaurant_name>/menu', methods=['GET'])
+def api_get_menu_by_name(restaurant_name):
+    restaurant = getRestaurantByName(restaurant_name)
+    if restaurant:
+        return jsonify({'menu': restaurant.menu})
+    else:
+        return jsonify({'error': 'Restaurant not found'}), 404
+
 
 if __name__ == "__main__":
     
