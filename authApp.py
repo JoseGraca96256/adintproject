@@ -92,6 +92,7 @@ def callback():
         data=body,
         auth=(FENIX_CLIENT_ID, FENIX_CLIENT_SECRET),
     )
+
     client.parse_request_body_response(json.dumps(token_response.json()))
 
     userinfo_endpoint = "https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person"
