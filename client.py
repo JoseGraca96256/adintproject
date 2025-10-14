@@ -120,7 +120,6 @@ def public_info():
     message = None
 
     if qr_data:
-        # Example: use your client.py logic to process QR data
         message = process_qr_data(qr_data)
 
     # Render your main page again, with the info included
