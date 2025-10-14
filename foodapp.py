@@ -27,6 +27,7 @@ engine = create_engine('sqlite:///%s'%(DATABASE_FILE), echo=False) #echo = True 
 Base = declarative_base()
 
 
+
 class Restaurant(Base):
     __tablename__ = 'restaurant'
     id = Column(Integer, primary_key=True)
@@ -39,6 +40,10 @@ class Restaurant(Base):
         return "<Restaurant(id=%d name='%s', reservations='%d', menu='%s', rating='%f',number_of_ratings='%d')>" % (
                                 self.id, self.name, self.reservations, self.menu, self.rating, self.number_of_ratings)
     
+class Reservation:
+    __tablename__ = 'reservation'
+    id = Column(Integer, primary_key=True)
+    restaurant = relationship ("Restaurant")
 
 
 Base.metadata.create_all(engine) #Create tables for the data models
@@ -144,6 +149,7 @@ def rate_restaurant():
         return redirect(url_for('restaurant_detail', restId=rest_id))
     else:
         return "Restaurant not found", 404
+    
 handler = XMLRPCHandler('api')
 handler.connect(app, '/api')
 
@@ -220,13 +226,42 @@ def remove_restaurant_by_id(restaurantID):
 #project 2 - REST API
 
 
-@app.route('/api/restaurant/<string:restaurant_name>/menu', methods=['GET'])
+@app.route('/api/<string:restaurant_name>/menu', methods=['GET'])
 def api_get_menu_by_name(restaurant_name):
     restaurant = getRestaurantByName(restaurant_name)
     if restaurant:
         return jsonify({'menu': restaurant.menu})
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
+
+@app.route('/api/restaurant/<string:restaurant_name>/<int:rating> ', methods=['GET'])
+def api_update_rating(restaurant_name, rating):
+    restaurant = getRestaurantByName(restaurant_name)
+    if restaurant:
+        total = restaurant.rating * restaurant.number_of_ratings + rating
+        restaurant.number_of_ratings += 1
+        restaurant.rating = total / restaurant.number_of_ratings
+        session.commit()
+        return jsonify({'message': 'Rating updated successfully', 'new_rating': restaurant.rating})
+    else:
+        return jsonify({'error': 'Restaurant not found'}), 404
+    
+@app.route('/api/reserve/<string:restaurant_name>', methods=['PUT'])
+def api_reserve_table(restaurant_name):
+    restaurant = getRestaurantByName(restaurant_name)
+    if restaurant:
+        restaurant.reservations += 1
+        time = request.get_json()
+
+        
+        session.commit()
+        return jsonify({'message': 'Reservation added successfully', 'total_reservations': restaurant.reservations})
+    else:
+        return jsonify({'error': 'Restaurant not found'}), 404
+
+        
+
+        
 
 
 if __name__ == "__main__":
