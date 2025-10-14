@@ -5,7 +5,7 @@ from flask_xmlrpcre.xmlrpcre import XMLRPCHandler
 from os import path
 import datetime
 
-DATABASE_FILE = "messagesdb.sqlite"
+DATABASE_FILE = "db/messagesdb.sqlite"
 db_exists = path.exists(DATABASE_FILE)
 
 engine = create_engine(f"sqlite:///{DATABASE_FILE}", echo=False)

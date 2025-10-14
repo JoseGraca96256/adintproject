@@ -14,7 +14,7 @@ from flask_xmlrpcre.xmlrpcre import *
 import time as t
 
 #SLQ access layer initialization
-DATABASE_FILE = "roomdb.sqlite"
+DATABASE_FILE = "db/roomdb.sqlite"
 db_exists = False
 if path.exists(DATABASE_FILE):
     db_exists = True

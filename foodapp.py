@@ -16,7 +16,7 @@ import time as t
 
 
 #SLQ access layer initialization
-DATABASE_FILE = "fooddb.sqlite"
+DATABASE_FILE = "db/fooddb.sqlite"
 db_exists = False
 if path.exists(DATABASE_FILE):
     db_exists = True

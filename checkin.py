@@ -9,7 +9,7 @@ import datetime
 from os import path
 
 #SLQ access layer initialization
-DATABASE_FILE = "check.sqlite"
+DATABASE_FILE = "db/check.sqlite"
 db_exists = False
 if path.exists(DATABASE_FILE):
     db_exists = True
