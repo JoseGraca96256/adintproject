@@ -130,7 +130,7 @@ def restaurant_detail(restId):
     else:
         return "Restaurant not found", 404
 
-@app.route('/rate', methods=["POST"])
+
 @app.route('/rate', methods=["POST"])
 def rate_restaurant():
     rest_id = int(request.form.get("restId"))
