@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code Reader</title>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+
+    h2.ui.header {
+      margin-bottom: 1.5em;
+    }
+
+    #reader {
+      width: 320px;
+      max-width: 90vw;
+      border-radius: 12px;
+      margin: 0 auto;
+    }
+
+    #result {
+      margin-top: 1em;
+      width: 320px;
+      max-width: 90vw;
+      text-align: center;
+      display: none;
+    }
+
+    #status {
+      margin-top: 0.5em;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <h2 class="ui header"><i class="qrcode icon"></i> QR Code Reader</h2>
+
+  <div id="reader" class="ui segment"></div>
+  <div id="result" class="ui teal message"></div>
+  <p id="status" class="ui grey text">Initializing camera...</p>
+
+  <script>
+    function onScanSuccess(decodedText, decodedResult) {
+      console.log("Decoded:", decodedText);
+      $('#status').text("QR code detected!");
+      $('#result').show().html(`<b>Detected:</b> ${decodedText}`);
+
+      // Redirect back to main page with QR data
+      window.location.href = `/public_info?data=${encodeURIComponent(decodedText)}`;
+    }
+
+    function onScanError(errorMessage) {
+      // You can display scanning status if you want
+    }
+
+    console.log("Starting QR code scanner...");  
+
+    // Start html5-qrcode (handles its own camera)
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+    if (devices && devices.length) {
+      console.log("Cameras found:", devices);
+      const cameraId = devices[0].id;
+
+      html5QrCode.start(
+        cameraId,
+        { fps: 10, qrbox: 250 },
+        onScanSuccess,
+        onScanError
+      ).then(() => {
+        console.log("QR scanner started successfully!");
+        $('#status').text("Camera ready — point at a QR code.");
+      }).catch(err => {
+        console.error("Error starting QR code scanner:", err);
+        $('#status').text("Failed to start camera: " + err);
+      });
+    } else {
+      console.warn("No cameras found.");
+      $('#status').text("No camera found.");
+    }
+    }).catch(err => {
+      console.error("Error listing cameras:", err);
+      $('#status').text("Error getting cameras: " + err);
+    });
+  </script>
+</body>
+</html>

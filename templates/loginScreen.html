@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>App Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css" 
+          href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+    <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+
+    <style>
+      body {
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .app-container {
+        width: 360px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        padding: 2em;
+        text-align: center;
+      }
+
+      .app-logo {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background-color: #2185d0; /* Fomantic blue */
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 2em;
+        font-weight: bold;
+        margin: 0 auto 2em auto;
+      }
+
+      .ui.segment {
+        border-radius: 12px !important;
+        margin-bottom: 1.5em !important;
+        padding: 1.5em !important;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .ui.segment:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .segment-title {
+        font-size: 1.2em;
+        font-weight: 600;
+        color: #333;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app-container">
+      <!-- <div class="app-logo">A</div> -->
+
+      <div class="ui segment" id="loginButton">
+        <div class="segment-title"><i class="sign-in icon"></i> Login</div>
+      </div>
+
+      <div class="ui segment" id="QRContextButton">
+        <div class="segment-title"><i class="qrcode icon"></i> QR Code Reader</div>
+      </div>
+
+      <!-- <div class="ui segment" id="publicInfoButton">            
+        <div class="segment-title"><i class="info circle icon"></i> Public Info</div>
+      </div> -->
+      <!-- Public Info Window -->
+      <div class="ui segment" id="publicInfoBox">
+        <div class="segment-title"><i class="info circle icon"></i> Public Information</div>
+        {% if public_info %}
+          <div class="ui message teal" style="margin-top: 1em;">
+            {{ public_info }}
+          </div>
+        {% else %}
+          <p>No information to display yet.</p>
+        {% endif %}
+      </div>
+
+    </div>      
+
+    <script>
+      // Redirect to Flask endpoints
+      $('#loginButton').on('click', function() {
+        window.location.href = "/login";
+      });
+
+      $('#QRContextButton').on('click', function() {
+        window.location.href = "/qrreader";
+      });
+
+      // $('#publicInfoButton').on('click', function() {
+      //   window.location.href = "/public"; // replace with your actual route
+      // });
+
+    </script>
+  </body>
+</html>
