@@ -18,8 +18,6 @@ app = Flask(__name__)
 FENIX_CLIENT_ID = 1132965128045002
 FENIX_CLIENT_SECRET = "3AZQyZGzlf/I3Q8KIYyH9DXlBlWA38kg+6EUWeCgTT2+3pbi+cx5RjumU/nxgVo2UsoyBWryM2/j3bZ+xnSdPw=="
 
-
-
 #Sqlalchemy configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///multi.db"
 db = SQLAlchemy()
@@ -42,10 +40,24 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 @app.route("/")
-def frontPage():
+def loginScreen():
     # print(listRooms())
     # rooms = listRooms()
     return render_template("loginScreen.html") 
+
+@app.route("/mainScreen")
+# @login_required
+def mainScreen():
+    # print(listRooms())
+    # rooms = listRooms()
+    return render_template("mainScreen.html") 
+
+@app.route("/messageScreen")
+@login_required
+def messageScreen():
+    # print(listRooms())
+    # rooms = listRooms()
+    return render_template("messageScreen.html") 
 
 @app.route("/login")
 def login():
@@ -95,19 +107,31 @@ def callback():
             db.session.rollback()
             user = db.session.query(User).filter(User.username == username).first()
             login_user(user)
-        return redirect(url_for("index"))
+        return redirect(url_for("mainScreen"))
     else:
         return "User email not available.", 400
 
 def process_qr_data(qr_text):
-    # Example logic: decode, fetch info, etc.
-    # if qr_text == "room123":
-    #     return "Room 123: Capacity 40, Available"
-    # elif qr_text == "menu45":
-    #     return "Restaurant Menu 45: Today's special - Pasta"
-    # else:
-    #     return f"Unrecognized QR code: {qr_text}"
-    return f"Scanned QR Code Data: {qr_text}"
+    """
+    Example QR text: "restaurant:IST_Canteen"
+    """
+    if qr_text.startswith("restaurant:"):
+        restaurant_name = qr_text.split("restaurant:")[1]
+        try:
+            response = requests.get(f"http://localhost:5100/api/{restaurant_name}/menu")
+
+            if response.status_code == 200:
+                data = response.json()
+                menu = data.get("menu", "No menu found.")
+                return f"Menu for {restaurant_name}: {menu}"
+            else:
+                return f"Error fetching menu ({response.status_code})."
+        except Exception as e:
+            return f"Error connecting to API: {e}"
+
+    else:
+        return "Unrecognized QR code format."
+    
 
 @app.route("/qrreader")
 def qrreader():
@@ -129,7 +153,7 @@ def public_info():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("index"))
+    return redirect(url_for("loginScreen"))
     
 # hook up extensions to app
 db.init_app(app)
