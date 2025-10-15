@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
+          integrity="sha512-uH+vZi8qkUeR7ODD6Emddh3MtC9Zhw+s5KRfV/H0JnQzkFscBBqLU3WtpV5UUoSnQtifpquC5/Wqe7kW7xMUVA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <style>
+    body {
+      background-color: #f9fafb;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+    }
+
+    .main-container {
+      background: white;
+      width: 380px;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+      padding: 1.5em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2em;
+    }
+
+    /* Top buttons */
+    .top-buttons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    #reader {
+      width: 320px;
+      max-width: 90%;
+      border-radius: 12px;
+    }
+
+    /* Action form (Component 4) */
+    .action-form {
+      width: 100%;
+      text-align: left;
+    }
+
+    /* Info section (Component 5) */
+    .info-section {
+      width: 100%;
+      text-align: left;
+    }
+
+    #status {
+      text-align: center;
+      color: #666;
+      margin-top: 0.5em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="main-container">
+    <!-- COMPONENTS 1 & 2 -->
+    <div class="top-buttons">
+      <button id="logoutBtn" class="ui red button">
+        <i class="sign out alternate icon"></i> Logout
+      </button>
+      <button id="messagesBtn" class="ui blue button">
+        <i class="envelope icon"></i> Messages
+      </button>
+    </div>
+
+    <!-- COMPONENT 3 -->
+    <div>
+      <h4 class="ui header"><i class="qrcode icon"></i> QR Code Reader</h4>
+      <div id="reader" class="ui segment"></div>
+      <p id="status">Initializing camera...</p>
+    </div>
+
+    <!-- COMPONENT 4 -->
+    <div class="action-form ui segment">
+      <h4 class="ui header"><i class="edit icon"></i> Actions</h4>
+      <form id="actionForm" class="ui form">
+        <div class="field">
+          <label>Option 1</label>
+          <input type="text" name="option1" placeholder="Enter value">
+        </div>
+        <div class="field">
+          <label>Option 2</label>
+          <input type="text" name="option2" placeholder="Enter value">
+        </div>
+        <button type="submit" class="ui teal button">Submit</button>
+      </form>
+    </div>
+
+    <!-- COMPONENT 5 -->
+    <div class="info-section ui segment">
+      <h4 class="ui header"><i class="info circle icon"></i> Information</h4>
+      <p id="infoText">Scan a QR code to see details here.</p>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------
+    // COMPONENT 1: Logout
+    // ----------------------------
+    $('#logoutBtn').on('click', function() {
+      window.location.href = "/logout";
+    });
+
+    // ----------------------------
+    // COMPONENT 2: Messages
+    // ----------------------------
+    $('#messagesBtn').on('click', function() {
+      window.open("/messages", "_blank");
+    });
+
+    // ----------------------------
+    // COMPONENT 3: QR Code Reader
+    // ----------------------------
+    const html5QrCode = new Html5Qrcode("reader");
+
+    function onScanSuccess(decodedText) {
+      console.log("Decoded:", decodedText);
+      $('#status').text("QR code detected!");
+
+      // Simulate backend query
+      $.ajax({
+        url: "/qrdata",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({ qrcode: decodedText }),
+        success: function(response) {
+          updateComponents(response);
+        },
+        error: function() {
+          $('#status').text("Error sending QR data to server.");
+        }
+      });
+    }
+
+    function onScanError(err) {
+      // Silent scan errors (optional: display if needed)
+    }
+
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        const cameraId = devices[0].id;
+        html5QrCode.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          onScanSuccess,
+          onScanError
+        ).then(() => {
+          $('#status').text("Camera ready — point at a QR code.");
+        }).catch(err => {
+          $('#status').text("Failed to start camera: " + err);
+        });
+      } else {
+        $('#status').text("No camera found.");
+      }
+    }).catch(err => {
+      $('#status').text("Error accessing cameras: " + err);
+    });
+
+    // ----------------------------
+    // COMPONENT 4 + 5 Dynamic Update
+    // ----------------------------
+    function updateComponents(data) {
+      // Assume Flask returns { type: "restaurant"|"classroom"|"studyroom"|"user", actions: [...], info: "..." }
+      let info = data.info || "No information available.";
+      let actions = data.actions || [];
+
+      $('#infoText').html(info);
+
+      const form = $('#actionForm');
+      form.empty();
+
+      if (actions.length > 0) {
+        actions.forEach(a => {
+          form.append(`
+            <div class="field">
+              <label>${a.label}</label>
+              <input type="text" name="${a.name}" placeholder="${a.placeholder || ''}">
+            </div>
+          `);
+        });
+        form.append('<button type="submit" class="ui teal button">Submit</button>');
+      } else {
+        form.html('<p>No available actions for this QR code.</p>');
+      }
+    }
+
+    // Example: Handle submit (will call Flask later)
+    $('#actionForm').on('submit', function(e) {
+      e.preventDefault();
+      const formData = $(this).serializeArray();
+      console.log("Form submitted:", formData);
+      $('#infoText').html("Action submitted successfully!");
+    });
+  </script>
+</body>
+</html>
