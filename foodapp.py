@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Date, Float
+from sqlalchemy import Column, Integer, String, Date, Float, DateTime
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 from flask import Flask, jsonify
@@ -40,10 +40,19 @@ class Restaurant(Base):
         return "<Restaurant(id=%d name='%s', reservations='%d', menu='%s', rating='%f',number_of_ratings='%d')>" % (
                                 self.id, self.name, self.reservations, self.menu, self.rating, self.number_of_ratings)
     
-class Reservation:
+class Reservation(Base):
     __tablename__ = 'reservation'
     id = Column(Integer, primary_key=True)
-    restaurant = relationship ("Restaurant")
+    restaurant_id = Column(Integer, ForeignKey('restaurant.id'), nullable=False)
+    date = Column(DateTime, default=datetime.datetime.utcnow)
+    restaurant = relationship ("Restaurant", back_populates="reservations")
+    def __repr__(self):
+        return "<Reservation(id=%d restaurant_id='%d', date='%s')>" % (
+                                self.id, self.restaurant_id, str(self.date))
+    
+    
+Restaurant.reservations = relationship(
+    "Reservation", order_by=Reservation.date, back_populates="restaurant")
 
 
 Base.metadata.create_all(engine) #Create tables for the data models
