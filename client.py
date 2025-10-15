@@ -17,6 +17,7 @@ app = Flask(__name__)
 
 FENIX_CLIENT_ID = 1132965128045002
 FENIX_CLIENT_SECRET = "3AZQyZGzlf/I3Q8KIYyH9DXlBlWA38kg+6EUWeCgTT2+3pbi+cx5RjumU/nxgVo2UsoyBWryM2/j3bZ+xnSdPw=="
+CALLBACK_URL = "https://localhost:5100/login/callback"  # This must match the redirect URI set in your OAuth provider
 
 #Sqlalchemy configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///multi.db"
@@ -46,7 +47,7 @@ def loginScreen():
     return render_template("loginScreen.html") 
 
 @app.route("/mainScreen")
-# @login_required
+@login_required
 def mainScreen():
     # print(listRooms())
     # rooms = listRooms()
@@ -86,30 +87,38 @@ def callback():
         data=body,
         auth=(FENIX_CLIENT_ID, FENIX_CLIENT_SECRET),
     )
+
     client.parse_request_body_response(json.dumps(token_response.json()))
+
+
 
     userinfo_endpoint = "https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person"
     uri, headers, body = client.add_token(userinfo_endpoint)
     userinfo_response = requests.get(uri, headers=headers, data=body)
     if userinfo_response.json().get("email"):
+        print(userinfo_response.json())
         username = userinfo_response.json()["username"]
         email = userinfo_response.json()["email"]
         name = userinfo_response.json()["name"]
         user = User(username = username,email = email,name=name)
         print(user.email, user.name, user.username)
-
-        try:
-            db.session.add(user)
-            db.session.commit()
-            # Log in the new local user account
-            login_user(user)
-        except:
-            db.session.rollback()
+        if not User.query.filter(User.email == email).first():
+            try:
+                db.session.add(user)
+                db.session.commit()
+                # Log in the new local user account
+                login_user(user)
+            except:
+                db.session.rollback()
+                user = db.session.query(User).filter(User.username == username).first()
+                login_user(user)
+        else:
             user = db.session.query(User).filter(User.username == username).first()
             login_user(user)
         return redirect(url_for("mainScreen"))
     else:
         return "User email not available.", 400
+
 
 def process_qr_data(qr_text):
     """
@@ -159,7 +168,8 @@ def logout():
 db.init_app(app)
 
 if __name__ == "__main__":
-    
+    app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
+
     with app.app_context():
         db.create_all()
         db.session.commit()
