@@ -1,8 +1,7 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Date, Float, DateTime
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declarative_base
 from flask import Flask, jsonify
 
 import datetime
@@ -32,13 +31,13 @@ class Restaurant(Base):
     __tablename__ = 'restaurant'
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    reservations = Column(Integer) 
+    nr_reservations = Column(Integer) 
     menu= Column(String)
     rating = Column(Float, default=0)
     number_of_ratings = Column(Integer, default=0)
     def __repr__(self):
-        return "<Restaurant(id=%d name='%s', reservations='%d', menu='%s', rating='%f',number_of_ratings='%d')>" % (
-                                self.id, self.name, self.reservations, self.menu, self.rating, self.number_of_ratings)
+        return "<Restaurant(id=%d name='%s', nr_reservations='%d', menu='%s', rating='%f',number_of_ratings='%d')>" % (
+                                self.id, self.name, self.nr_reservations, self.menu, self.rating, self.number_of_ratings)
     
 class Reservation(Base):
     __tablename__ = 'reservation'
@@ -69,7 +68,7 @@ def getRestaurant(restaurantID):
 
 def addRestaurant(name, reservations, menu, rating):
     if  not getRestaurantByName(name):
-        restaurant = Restaurant(name=name, reservations=reservations, menu=menu, rating=rating)
+        restaurant = Restaurant(name=name, nr_reservations=reservations, menu=menu, rating=float(rating))
         session.add(restaurant)
         session.commit()
 
@@ -255,39 +254,35 @@ def api_update_rating(restaurant_name, rating):
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
     
-@app.route('/api/reserve/<string:restaurant_name>', methods=['PUT'])
+@app.route('/api/reserve/<string:restaurant_name>', methods=['POST'])
 def api_reserve_table(restaurant_name):
     restaurant = getRestaurantByName(restaurant_name)
+    
     if restaurant:
-        restaurant.reservations += 1
-        time = request.get_json()
-
+        restaurant.nr_reservations += 1
+        time = request.get_json('date')['date']
+        new_reservation = Reservation(restaurant_id=restaurant.id, date=datetime.datetime.fromisoformat(time))
+        session.add(new_reservation)
         
         session.commit()
         return jsonify({'message': 'Reservation added successfully', 'total_reservations': restaurant.reservations})
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
 
-        
-
-        
-
 
 if __name__ == "__main__":
     
     if not db_exists:
-        addRestaurant("segredo", 0, "picanha",3)
-        addRestaurant("india", 0, "tikamassala",4)
-        addRestaurant("sushi", 15, "sashimi",5)
-
-    print("\nall restaurants")
-    lRestaurants = session.query(Restaurant).all()
-    print(lRestaurants)
-    print(listRestaurants())
-    print("\nrestaurants with reservations greater than 10")
-    busyRestaurants = session.query(Restaurant).filter(Restaurant.reservations > 10).all()
-    for r in busyRestaurants:
-        print(r.id, r.name, r.reservations, r.menu)
+        addRestaurant("segredo", 0, "picanha",3.0)
+        addRestaurant("india", 0, "tikamassala",4.0)
+        addRestaurant("sushi", 0, "sashimi",5.0)
+    elif session.query(Restaurant).count() == 0:
+        addRestaurant("segredo", 0, "picanha",3.0)
+        addRestaurant("india", 0, "tikamassala",4.0)
+        addRestaurant("sushi", 0, "sashimi",5.0)
+    else:
+        print("\t database ready to use")
+ 
     app.run(port=5000, debug=True)
 
     
