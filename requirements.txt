@@ -6,3 +6,4 @@ Flask-Login
 SQLAlchemy
 Flask-SQLAlchemy
 sqlalchemy_utils
+APScheduler

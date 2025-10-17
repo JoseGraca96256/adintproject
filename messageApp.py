@@ -4,6 +4,7 @@ from flask import Flask, request, render_template, redirect, url_for
 from flask_xmlrpcre.xmlrpcre import XMLRPCHandler
 from os import path
 import datetime
+from flask import jsonify
 
 DATABASE_FILE = "db/messagesdb.sqlite"
 db_exists = path.exists(DATABASE_FILE)
@@ -128,6 +129,28 @@ def list_messages_by_sender(sender):
 @handler.register
 def list_messages_by_receiver(receiver):
     return [m.id for m in getMessagesByReceiver(receiver)]
+
+#REST API endpoints 
+
+@app.route('/api/<string:username>/inbox', methods=['GET'])
+def api_inbox(username):
+    messages = getMessagesByReceiver(username)
+    result = [
+        dict(id=m.id, sender=m.sender, receiver=m.receiver, content=m.content, created_at=str(m.created_at))
+        for m in messages
+    ]
+    return jsonify(result)
+
+
+@app.route('/api/<string:username>/sent ', methods=['GET'])
+def api_sent(username):
+    messages = getMessagesBySender(username)
+    result = [
+        dict(id=m.id, sender=m.sender, receiver=m.receiver, content=m.content, created_at=str(m.created_at))
+        for m in messages
+    ]
+    return jsonify(result)
+
 
 if __name__ == "__main__":
     if not db_exists:

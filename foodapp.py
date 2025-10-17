@@ -12,7 +12,8 @@ from flask import render_template
 from flask_xmlrpcre.xmlrpcre import *
 from flask import request, redirect, url_for
 import time as t
-
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 #SLQ access layer initialization
 DATABASE_FILE = "db/fooddb.sqlite"
@@ -268,6 +269,17 @@ def api_reserve_table(restaurant_name):
         return jsonify({'message': 'Reservation added successfully', 'total_reservations': restaurant.reservations})
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
+
+def cleanup_old_reservations():
+    old_reservations = session.query(Reservation).filter(Reservation.date < datetime.datetime.utcnow() ).all()
+    for reservation in old_reservations:
+        reservation.restaurant.nr_reservations -= 1
+        session.delete(reservation)
+    session.commit()
+
+scheduler = BackgroundScheduler()
+
+scheduler.add_job(func=cleanup_old_reservations(), trigger="interval", hours=1)
 
 
 if __name__ == "__main__":
