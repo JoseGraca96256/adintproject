@@ -96,7 +96,7 @@ def callback():
     uri, headers, body = client.add_token(userinfo_endpoint)
     userinfo_response = requests.get(uri, headers=headers, data=body)
     if userinfo_response.json().get("email"):
-        print(userinfo_response.json())
+        # print(userinfo_response.json())
         username = userinfo_response.json()["username"]
         email = userinfo_response.json()["email"]
         name = userinfo_response.json()["name"]
@@ -122,12 +122,12 @@ def callback():
 
 def process_qr_data(qr_text):
     """
-    Example QR text: "restaurant:IST_Canteen"
+    Example QR text: "restaurant:IST_Canteen" or "room:1234"
     """
     if qr_text.startswith("restaurant:"):
         restaurant_name = qr_text.split("restaurant:")[1]
         try:
-            response = requests.get(f"http://localhost:5100/api/{restaurant_name}/menu")
+            response = requests.get(f"http://localhost:5000/api/{restaurant_name}/menu")
 
             if response.status_code == 200:
                 data = response.json()
@@ -138,7 +138,21 @@ def process_qr_data(qr_text):
         except Exception as e:
             return f"Error connecting to API: {e}"
 
-    else:
+    if qr_text.startswith("room:"):
+        room_name = qr_text.split("room:")[1]
+        try:
+            response = requests.get(f"http://localhost:5001/api/{room_name}/schedule")
+
+            if response.status_code == 200:
+                data = response.json()
+                schedule = data.get("menu", "No menu found.")
+                return f"Menu for {room_name}: {schedule}"
+            else:
+                return f"Error fetching schedule ({response.status_code})."
+        except Exception as e:
+            return f"Error connecting to API: {e}"
+        
+    else: 
         return "Unrecognized QR code format."
     
 
@@ -173,5 +187,5 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         db.session.commit()
-    print("Database tables created")
+    # print("Database tables created")
     app.run(port=5100, debug=True, ssl_context="adhoc")

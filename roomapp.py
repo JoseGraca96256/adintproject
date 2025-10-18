@@ -8,7 +8,7 @@ import datetime
 from sqlalchemy.orm import sessionmaker
 from os import path
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask import render_template
 from flask_xmlrpcre.xmlrpcre import *
 import time as t
@@ -112,6 +112,44 @@ def update_schedule_form():
         return redirect(url_for('index'))
     else:
         return "Room not found", 404
+
+#project 2 - REST API
+
+
+@app.route('/api/<string:room_name>/schedule', methods=['GET'])
+def api_get_schedule_by_name(room_name):
+    room = getRoomByName(room_name)
+    if room:
+        return jsonify({'menu': room.schedule})
+    else:
+        return jsonify({'error': 'Restaurant not found'}), 404
+
+# @app.route('/api/restaurant/<string:restaurant_name>/<int:rating> ', methods=['GET'])
+# def api_update_rating(restaurant_name, rating):
+#     restaurant = getRoomByName(restaurant_name)
+#     if restaurant:
+#         total = restaurant.rating * restaurant.number_of_ratings + rating
+#         restaurant.number_of_ratings += 1
+#         restaurant.rating = total / restaurant.number_of_ratings
+#         session.commit()
+#         return jsonify({'message': 'Rating updated successfully', 'new_rating': restaurant.rating})
+#     else:
+#         return jsonify({'error': 'Restaurant not found'}), 404
+    
+# @app.route('/api/reserve/<string:restaurant_name>', methods=['POST'])
+# def api_reserve_table(restaurant_name):
+#     restaurant = getRestaurantByName(restaurant_name)
+    
+#     if restaurant:
+#         restaurant.nr_reservations += 1
+#         time = request.get_json('date')['date']
+#         new_reservation = Reservation(restaurant_id=restaurant.id, date=datetime.datetime.fromisoformat(time))
+#         session.add(new_reservation)
+        
+#         session.commit()
+#         return jsonify({'message': 'Reservation added successfully', 'total_reservations': restaurant.reservations})
+#     else:
+#         return jsonify({'error': 'Restaurant not found'}), 404
 
 if __name__ == "__main__":
 
