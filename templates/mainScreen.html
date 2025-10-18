@@ -81,10 +81,13 @@
     </div>
 
     <!-- COMPONENT 3 -->
-    <div>
+    <!-- <div>
       <h4 class="ui header"><i class="qrcode icon"></i> QR Code Reader</h4>
       <div id="reader" class="ui segment"></div>
       <p id="status">Initializing camera...</p>
+    </div> -->
+    <div class="ui segment" id="QRContextButton">
+      <div class="segment-title"><i class="qrcode icon"></i> QR Code Reader</div>
     </div>
 
     <!-- COMPONENT 4 -->
@@ -128,50 +131,53 @@
     // ----------------------------
     // COMPONENT 3: QR Code Reader
     // ----------------------------
-    const html5QrCode = new Html5Qrcode("reader");
+    // const html5QrCode = new Html5Qrcode("reader");
 
-    function onScanSuccess(decodedText) {
-      console.log("Decoded:", decodedText);
-      $('#status').text("QR code detected!");
+    // function onScanSuccess(decodedText) {
+    //   console.log("Decoded:", decodedText);
+    //   $('#status').text("QR code detected!");
 
-      // Simulate backend query
-      $.ajax({
-        url: "/qrdata",
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ qrcode: decodedText }),
-        success: function(response) {
-          updateComponents(response);
-        },
-        error: function() {
-          $('#status').text("Error sending QR data to server.");
-        }
+    //   // Simulate backend query
+    //   $.ajax({
+    //     url: "/qrdata",
+    //     type: "POST",
+    //     contentType: "application/json",
+    //     data: JSON.stringify({ qrcode: decodedText }),
+    //     success: function(response) {
+    //       updateComponents(response);
+    //     },
+    //     error: function() {
+    //       $('#status').text("Error sending QR data to server.");
+    //     }
+    //   });
+    // }
+
+    // function onScanError(err) {
+    //   // Silent scan errors (optional: display if needed)
+    // }
+
+    // Html5Qrcode.getCameras().then(devices => {
+    //   if (devices && devices.length) {
+    //     const cameraId = devices[0].id;
+    //     html5QrCode.start(
+    //       cameraId,
+    //       { fps: 10, qrbox: 250 },
+    //       onScanSuccess,
+    //       onScanError
+    //     ).then(() => {
+    //       $('#status').text("Camera ready — point at a QR code.");
+    //     }).catch(err => {
+    //       $('#status').text("Failed to start camera: " + err);
+    //     });
+    //   } else {
+    //     $('#status').text("No camera found.");
+    //   }
+    // }).catch(err => {
+    //   $('#status').text("Error accessing cameras: " + err);
+    // });
+      $('#QRContextButton').on('click', function() {
+        window.location.href = "/qrreader";
       });
-    }
-
-    function onScanError(err) {
-      // Silent scan errors (optional: display if needed)
-    }
-
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        const cameraId = devices[0].id;
-        html5QrCode.start(
-          cameraId,
-          { fps: 10, qrbox: 250 },
-          onScanSuccess,
-          onScanError
-        ).then(() => {
-          $('#status').text("Camera ready — point at a QR code.");
-        }).catch(err => {
-          $('#status').text("Failed to start camera: " + err);
-        });
-      } else {
-        $('#status').text("No camera found.");
-      }
-    }).catch(err => {
-      $('#status').text("Error accessing cameras: " + err);
-    });
 
     // ----------------------------
     // COMPONENT 4 + 5 Dynamic Update
