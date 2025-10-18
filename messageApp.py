@@ -1,31 +1,61 @@
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from flask import Flask, request, render_template, redirect, url_for
 from flask_xmlrpcre.xmlrpcre import XMLRPCHandler
 from os import path
 import datetime
 from flask import jsonify
-
+from sqlalchemy import ForeignKey
 DATABASE_FILE = "db/messagesdb.sqlite"
 db_exists = path.exists(DATABASE_FILE)
 
 engine = create_engine(f"sqlite:///{DATABASE_FILE}", echo=False)
 Base = declarative_base()
 
+class User(Base):
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    def __repr__(self):
+        return f"<User(id={self.id} username='{self.username}')>"
+
 class Message(Base):
     __tablename__ = 'message'
     id = Column(Integer, primary_key=True)
-    sender = Column(String, nullable=False)
-    receiver = Column(String, nullable=False)
+    sender_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    receiver_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     content = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # Add relationships
+    sender_user = relationship("User", foreign_keys=[sender_id], backref="sent_messages")
+    receiver_user = relationship("User", foreign_keys=[receiver_id], backref="received_messages")
+    
     def __repr__(self):
-        return f"<Message(id={self.id} sender='{self.sender}' receiver='{self.receiver}' content='{self.content}')>"
+        return f"<Message(id={self.id} sender_id={self.sender_id} receiver_id={self.receiver_id} content='{self.content}')>"
+
+
+class Friendship(Base):
+    __tablename__ = 'friendship'
+    id = Column(Integer, primary_key=True)
+    user1_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user2_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    
+    # Optional: Add relationships if you want to access User objects directly
+    user1 = relationship("User", foreign_keys=[user1_id])
+    user2 = relationship("User", foreign_keys=[user2_id])
+    
+    def __repr__(self):
+        return f"<Friendship(id={self.id} user1_id={self.user1_id} user2_id={self.user2_id})>"
+
 
 Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
 session = Session()
+
+def getUserByUsername(username):
+    return session.query(User).filter(User.username == username).first()
 
 # Data access helpers
 def listMessages():
@@ -36,7 +66,14 @@ def getMessage(messageID):
     return session.query(Message).filter(Message.id == messageID).first()
 
 def addMessage(sender, receiver, content):
-    m = Message(sender=sender, receiver=receiver, content=content)
+    senderID = getUserByUsername(sender).id
+    receiverID = getUserByUsername(receiver).id
+    if not senderID:
+        return None
+    if not receiverID:
+        return None
+    
+    m = Message(sender_id=senderID, receiver_id=receiverID, content=content)
     session.add(m)
     session.commit()
     return m.id
@@ -130,6 +167,34 @@ def list_messages_by_sender(sender):
 def list_messages_by_receiver(receiver):
     return [m.id for m in getMessagesByReceiver(receiver)]
 
+#proj2 functions
+
+def get_friends_by_id(user_id):
+    friendships = session.query(Friendship).filter(
+        (Friendship.user1_id == user_id) | (Friendship.user2_id == user_id)
+    ).all()
+    friends = []
+    for friendship in friendships:
+        if friendship.user1 == user_id:
+            friends.append(friendship.user2)
+        else:
+            friends.append(friendship.user1)
+    return friends
+
+def get_friends_by_username(username):
+    user = session.query(User).filter(User.username == username).first()
+    if not user:
+        return []
+    return get_friends_by_id(user.id)
+    
+def getMessagesBySender(nick):
+    sender_id = getUserByUsername(nick).id
+    return session.query(Message).filter(Message.sender_id == sender_id).all()
+
+def getMessagesByReceiver(nick):
+    receiver_id = getUserByUsername(nick).id
+    return session.query(Message).filter(Message.receiver_id == receiver_id).all()
+
 #REST API endpoints 
 
 @app.route('/api/<string:username>/inbox', methods=['GET'])
@@ -152,9 +217,32 @@ def api_sent(username):
     return jsonify(result)
 
 
+
 if __name__ == "__main__":
+
+    if not session.query(User).count() or not db_exists:
+        u1 = User(username="admin")
+        u2 = User(username="alice")
+        u3 = User(username="bob")
+        u4 = User(username="system")
+        session.add_all([u1, u2, u3, u4])
+        session.commit()
+        
     if not db_exists:
         addMessage("system", "admin", "Welcome to the message service")
         addMessage("alice", "bob", "Hi Bob!")
         addMessage("bob", "alice", "Hello Alice!")
+        
+    if session.query(Friendship).count() == 0:
+        f1 = Friendship(user1_id=1, user2_id=2)
+        f2 = Friendship(user1_id=2, user2_id=3)
+
+        session.add_all([f1, f2])
+        session.commit()
+
+    print(get_friends_by_id(2))  # Example usage
+
+    print(f"messages from alice: {getMessagesBySender('alice')}")
+    print(f"messages to alice: {getMessagesByReceiver('alice')}")
+    print(f"alice's friends: {get_friends_by_username('alice')}")
     app.run(port=5010, debug=True)

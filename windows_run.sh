@@ -1,0 +1,1 @@
+d:; cd 'd:\adi\adintproject'; & 'c:\Users\migue\AppData\Local\Programs\Python\Python312\python.exe' 'c:\Users\migue\.vscode\extensions\ms-python.debugpy-2025.14.1-win32-x64\bundled\libs\debugpy\launcher' '57724' '--' 'd:\adi\adintproject\foodapp.py'

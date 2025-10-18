@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Messages</title>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f9fafb;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 1em;
+    }
+
+    .main-container {
+      background: white;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+      padding: 1.5em;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2em;
+    }
+
+    /* Top buttons */
+    .top-buttons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    /* QR Code display */
+    #qrcodeDisplay {
+      text-align: center;
+      padding: 1em;
+    }
+
+    #qrcodeCanvas {
+      margin: 0 auto;
+    }
+
+    /* Message form */
+    .message-form {
+      width: 100%;
+    }
+
+    /* Info section */
+    .info-section {
+      width: 100%;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .message-item {
+      padding: 0.8em;
+      margin-bottom: 0.5em;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #2185d0;
+    }
+
+    .location-info {
+      padding: 1em;
+      background: #e8f4f8;
+      border-radius: 8px;
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="main-container">
+    <!-- COMPONENTS 1 & 2: Logout and Return to Main Screen -->
+    <div class="top-buttons">
+      <button id="logoutBtn" class="ui red button">
+        <i class="sign out alternate icon"></i> Logout
+      </button>
+      <button id="mainScreenBtn" class="ui blue button">
+        <i class="home icon"></i> Main Screen
+      </button>
+    </div>
+
+    <!-- COMPONENT 3: QR Code and Friends List -->
+    <div class="ui segment">
+      <h4 class="ui header"><i class="qrcode icon"></i> Add Friends</h4>
+      
+      <button id="showQRBtn" class="ui teal button fluid">
+        <i class="qrcode icon"></i> Show My QR Code
+      </button>
+      
+      <div id="qrcodeDisplay" style="display: none;">
+        <div id="qrcodeCanvas"></div>
+        <p class="ui text">Share this QR code with friends</p>
+        <button id="hideQRBtn" class="ui button">Hide QR Code</button>
+      </div>
+
+      <div class="ui divider"></div>
+
+      <div class="field">
+        <label><i class="users icon"></i> Select Friend</label>
+        <select id="friendDropdown" class="ui fluid dropdown">
+          <option value="">Choose a friend...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- COMPONENT 4: Send Message Form -->
+    <div class="message-form ui segment">
+      <h4 class="ui header"><i class="paper plane icon"></i> Send Message</h4>
+      <form id="messageForm" class="ui form">
+        <div class="field">
+          <label>To:</label>
+          <input type="text" id="selectedFriend" readonly placeholder="Select a friend first">
+        </div>
+        <div class="field">
+          <label>Message</label>
+          <textarea id="messageText" rows="3" placeholder="Type your message..."></textarea>
+        </div>
+        <button type="submit" class="ui primary button" id="sendMessageBtn" disabled>
+          <i class="send icon"></i> Send Message
+        </button>
+      </form>
+    </div>
+
+    <!-- COMPONENT 5: Friend Location and Messages -->
+    <div class="info-section ui segment">
+      <h4 class="ui header"><i class="map marker alternate icon"></i> Friend Info & Messages</h4>
+      
+      <div id="locationInfo" style="display: none;">
+        <div class="location-info">
+          <strong>Location:</strong> <span id="friendLocation">Unknown</span>
+        </div>
+      </div>
+
+      <div id="messagesContainer">
+        <p class="ui grey text">Select a friend to view messages and location</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUserId = null;
+    let currentFriendId = null;
+
+    // Initialize
+    $(document).ready(function() {
+      $('.ui.dropdown').dropdown();
+      loadUserData();
+      loadFriendsList();
+    });
+
+    // ----------------------------
+    // COMPONENT 1: Logout
+    // ----------------------------
+    $('#logoutBtn').on('click', function() {
+      window.location.href = "/logout";
+    });
+
+    // ----------------------------
+    // COMPONENT 2: Return to Main Screen
+    // ----------------------------
+    $('#mainScreenBtn').on('click', function() {
+      window.location.href = "/";
+    });
+
+    // ----------------------------
+    // COMPONENT 3: QR Code & Friends
+    // ----------------------------
+    function loadUserData() {
+      $.ajax({
+        url: "/api/user/profile",
+        type: "GET",
+        success: function(response) {
+          currentUserId = response.userId;
+        },
+        error: function() {
+          console.error("Failed to load user data");
+        }
+      });
+    }
+
+    $('#showQRBtn').on('click', function() {
+      $('#qrcodeDisplay').show();
+      $('#qrcodeCanvas').empty();
+      
+      // Generate QR code with user ID
+      new QRCode(document.getElementById("qrcodeCanvas"), {
+        text: `USER:${currentUserId}`,
+        width: 200,
+        height: 200
+      });
+    });
+
+    $('#hideQRBtn').on('click', function() {
+      $('#qrcodeDisplay').hide();
+    });
+
+    function loadFriendsList() {
+      $.ajax({
+        url: "/api/friends/list",
+        type: "GET",
+        success: function(response) {
+          const dropdown = $('#friendDropdown');
+          dropdown.empty().append('<option value="">Choose a friend...</option>');
+          
+          response.friends.forEach(friend => {
+            dropdown.append(`<option value="${friend.id}">${friend.name}</option>`);
+          });
+          
+          $('.ui.dropdown').dropdown('refresh');
+        },
+        error: function() {
+          console.error("Failed to load friends list");
+        }
+      });
+    }
+
+    $('#friendDropdown').on('change', function() {
+      const friendId = $(this).val();
+      const friendName = $(this).find('option:selected').text();
+      
+      if (friendId) {
+        currentFriendId = friendId;
+        $('#selectedFriend').val(friendName);
+        $('#sendMessageBtn').prop('disabled', false);
+        loadFriendData(friendId);
+      } else {
+        currentFriendId = null;
+        $('#selectedFriend').val('');
+        $('#sendMessageBtn').prop('disabled', true);
+        $('#locationInfo').hide();
+        $('#messagesContainer').html('<p class="ui grey text">Select a friend to view messages and location</p>');
+      }
+    });
+
+    // ----------------------------
+    // COMPONENT 4: Send Message
+    // ----------------------------
+    $('#messageForm').on('submit', function(e) {
+      e.preventDefault();
+      
+      const message = $('#messageText').val().trim();
+      if (!message || !currentFriendId) return;
+
+      $.ajax({
+        url: "/api/messages/send",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+          friendId: currentFriendId,
+          message: message
+        }),
+        success: function(response) {
+          $('#messageText').val('');
+          loadFriendData(currentFriendId); // Refresh messages
+          alert('Message sent successfully!');
+        },
+        error: function() {
+          alert('Failed to send message');
+        }
+      });
+    });
+
+    // ----------------------------
+    // COMPONENT 5: Location & Messages
+    // ----------------------------
+    function loadFriendData(friendId) {
+      // Load friend location
+      $.ajax({
+        url: `/api/friends/${friendId}/location`,
+        type: "GET",
+        success: function(response) {
+          $('#friendLocation').text(response.location || 'Unknown');
+          $('#locationInfo').show();
+        },
+        error: function() {
+          $('#friendLocation').text('Unable to fetch location');
+          $('#locationInfo').show();
+        }
+      });
+
+      // Load messages
+      $.ajax({
+        url: `/api/messages/${friendId}`,
+        type: "GET",
+        success: function(response) {
+          displayMessages(response.messages);
+        },
+        error: function() {
+          $('#messagesContainer').html('<p class="ui red text">Failed to load messages</p>');
+        }
+      });
+    }
+
+    function displayMessages(messages) {
+      const container = $('#messagesContainer');
+      container.empty();
+
+      if (messages.length === 0) {
+        container.html('<p class="ui grey text">No messages yet</p>');
+        return;
+      }
+
+      messages.forEach(msg => {
+        const messageClass = msg.sender === currentUserId ? 'sent' : 'received';
+        container.append(`
+          <div class="message-item">
+            <strong>${msg.senderName}:</strong> ${msg.text}
+            <div class="ui mini grey text">${msg.timestamp}</div>
+          </div>
+        `);
+      });
+    }
+
+    // Optional: Auto-refresh messages every 10 seconds
+    setInterval(function() {
+      if (currentFriendId) {
+        loadFriendData(currentFriendId);
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
+
+
