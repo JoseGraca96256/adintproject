@@ -79,17 +79,72 @@
       <!-- Public Info Window -->
       <div class="ui segment" id="publicInfoBox">
         <div class="segment-title"><i class="info circle icon"></i> Public Information</div>
+
         {% if public_info %}
-          <div class="ui message teal" style="margin-top: 1em;">
-            {{ public_info }}
+          <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
+
+            {% if public_info.type == 'restaurant' %}
+              <!-- 🥗 Restaurant Information -->
+              <h4 class="ui header">
+                <i class="utensils icon"></i> {{ public_info.name }}
+                <div class="sub header">Restaurant Menu</div>
+              </h4>
+
+              {% if public_info.menu %}
+                <div class="ui relaxed divided list">
+                  {% for item in public_info.menu %}
+                    <div class="item">
+                      <i class="dot circle outline icon teal"></i>
+                      <div class="content">{{ item }}</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p><em>No menu available.</em></p>
+              {% endif %}
+
+            {% elif public_info.type == 'classroom' or public_info.type == 'studyroom' %}
+              <!-- 🏫 Room Information -->
+              <h4 class="ui header">
+                <i class="chalkboard icon"></i> {{ public_info.name }}
+                <div class="sub header">Room Schedule</div>
+              </h4>
+
+              {% if public_info.schedule %}
+                <table class="ui celled compact teal table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Class</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for entry in public_info.schedule %}
+                      <tr>
+                        <td>{{ entry.time }}</td>
+                        <td>{{ entry.course }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <p><em>No schedule information available.</em></p>
+              {% endif %}
+
+            {% else %}
+              <!-- 👤 Fallback or User QR -->
+              <p>{{ public_info }}</p>
+            {% endif %}
           </div>
         {% else %}
-          <p>No information to display yet.</p>
+          <div class="ui placeholder segment" style="margin-top: 1em;">
+            <div class="ui icon header">
+              <i class="qrcode icon"></i>
+              Scan a QR code to view information here.
+            </div>
+          </div>
         {% endif %}
       </div>
-
-    </div>      
-
     <script>
       // Redirect to Flask endpoints
       $('#loginButton').on('click', function() {
