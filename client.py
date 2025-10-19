@@ -239,6 +239,17 @@ def messageAppIsUser(username):
     )
     return response.status_code == 200
 
+@app.route("/api/user/add_friend", methods=["POST"])
+@login_required
+def add_friend():
+    data = request.get_json()
+    friend_username = data.get("friend_username")
+    current_username = current_user.username
+    if addFriendToMessageApp(current_username, friend_username):
+        return jsonify({"message": "Friend added successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to add friend"}), 500
+    
 
 #################################UTILITY FUNCTIONS####################################
 
