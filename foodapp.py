@@ -279,7 +279,7 @@ def cleanup_old_reservations():
 
 scheduler = BackgroundScheduler()
 
-scheduler.add_job(func=cleanup_old_reservations(), trigger="interval", hours=1)
+#scheduler.add_job(func='cleanup_old_reservations()', trigger="interval", hours=1)
 
 
 if __name__ == "__main__":
