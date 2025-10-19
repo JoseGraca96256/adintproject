@@ -29,9 +29,9 @@ db = SQLAlchemy()
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(256), unique=True)
-    name = db.Column(db.String(256), unique=True)
-    email = db.Column(db.String(256), unique=True)
+    username = db.Column(db.String(256), unique=True, nullable=False)
+    name = db.Column(db.String(256), unique=True, nullable=False)
+    email = db.Column(db.String(256), unique=True, nullable=False)
 
 # User session management setup
 # https://flask-login.readthedocs.io/en/latest
@@ -120,6 +120,8 @@ def callback():
         else:
             user = db.session.query(User).filter(User.username == username).first()
             login_user(user)
+            if not messageAppIsUser(username):
+                addUserToMessageApp(username)
         return redirect(url_for("mainScreen"))
     else:
         return "User email not available.", 400
@@ -197,6 +199,18 @@ def get_user_profile():
     }
     return jsonify(user_data), 200
 
+@app.route("/api/friends", methods=["GET"])
+@login_required
+def get_friends_list():
+    response = requests.get(
+        url=f"{MESSAGE_API_URL}/{current_user.username}/friends",
+        headers={"Content-Type": "application/json"}
+    )
+    if response.status_code == 200:
+        return response.json(), 200
+    else:
+        return jsonify({"error": "Failed to fetch friends list"}), 500
+
 def addUserToMessageApp(username):
     response = requests.post(
         url=f"{MESSAGE_API_URL}/add_user",
@@ -218,11 +232,56 @@ def addFriendToMessageApp(username, friendUsername):
     )
     return response.status_code == 200
 
+def messageAppIsUser(username):
+    response = requests.get(
+        url=f"{MESSAGE_API_URL}/User/{username}",
+        headers={"Content-Type": "application/json"}
+    )
+    return response.status_code == 200
+
+
+#################################UTILITY FUNCTIONS####################################
+
+def deleteUser(id):
+    user = User.query.get(id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        return True
+    return False
+
+@app.route("/bots/create/<int:number_of_bots>")
+def create_bots(number_of_bots):
+    
+    for i in range(number_of_bots):
+        bot_username = f"bot{i}"
+        bot_name = f"Bot{i} Botson"
+        bot_email = f"bot{i}@bot"
+        bot = User(username=bot_username, name=bot_name, email=bot_email)
+        db.session.add(bot)
+        addUserToMessageApp(bot_username)
+
+    db.session.commit()
+    return 
+
+def removeBots():
+    users = db.session.query(User).filter(User.username.startswith("bot")).all()
+    for user in users:
+
+        db.session.delete(user)
+    db.session.commit()
+    return
+
 if __name__ == "__main__":
     app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 
     with app.app_context():
         db.create_all()
         db.session.commit()
+
+    
+    #removeBots()
+
+
     # print("Database tables created")
     app.run(port=5100, debug=True, ssl_context="adhoc")

@@ -200,6 +200,16 @@ def getMessagesByReceiver(nick):
 
 #REST API endpoints 
 
+@app.route('/api/User/<string:username>', methods=['GET'])
+def api_is_user(username):
+    user = getUserByUsername(username)
+    if user:
+        return  200
+    else:
+        return  404  
+
+
+
 @app.route('/api/add_user', methods=['POST'])
 def api_add_user():
     data = request.get_json()
@@ -252,6 +262,29 @@ def api_add_friend():
     
     return "Friend added successfully", 200
 
+@app.route('/api/user/<string:username>', methods=['DELETE'])
+def api_delete_user(username):
+    user = getUserByUsername(username)
+    if not user:
+        return "User not found", 404
+    session.delete(user)
+    session.commit()
+    return "User deleted successfully", 200
+
+@app.route('/api/users/<string:username>/friends', methods=['GET'])
+def api_get_friends(username):
+    user = getUserByUsername(username)
+    if not user:
+        return "User not found", 404
+    friendsID = get_friends_by_username(username)
+    friendsUsername=[]
+    for friendIS in friendsID:
+        friend = session.query(User).filter(User.id == friendIS).first()
+        friendsUsername.append(friend.username)
+    return jsonify(friendsUsername)
+    
+    
+
 @app.route('/api/<string:username>/inbox', methods=['GET'])
 def api_inbox(username):
     messages = getMessagesByReceiver(username)
@@ -260,7 +293,6 @@ def api_inbox(username):
         for m in messages
     ]
     return jsonify(result)
-
 
 @app.route('/api/<string:username>/sent ', methods=['GET'])
 def api_sent(username):
@@ -271,7 +303,21 @@ def api_sent(username):
     ]
     return jsonify(result)
 
+def deleteUser(id):
+    user = User.query.get(id)
+    if user:
+        session.delete(user)
+        session.commit()
+    return
 
+
+def removeBots():
+    users = session.query(User).filter(User.username.startswith("bot")).all()
+    for user in users:
+
+        session.delete(user)
+    session.commit()
+    return
 
 if __name__ == "__main__":
 

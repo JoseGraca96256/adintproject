@@ -215,9 +215,10 @@
         success: function(response) {
           const dropdown = $('#friendDropdown');
           dropdown.empty().append('<option value="">Choose a friend...</option>');
-          response.friends.forEach(friend => {
-            dropdown.append(`<option value="${friend.id}">${friend.name}</option>`);
+          response.forEach(username => {
+            dropdown.append(`<option value="${username}">${username}</option>`);
           });
+        },
         error: function() {
           console.error("Failed to load friends list");
         }
