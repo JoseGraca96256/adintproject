@@ -53,7 +53,7 @@ def mainScreen():
     # rooms = listRooms()
     return render_template("mainScreen.html") 
 
-@app.route("/messageScreen")
+@app.route("/messages")
 @login_required
 def messageScreen():
     # print(listRooms())
