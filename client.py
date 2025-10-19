@@ -19,6 +19,10 @@ FENIX_CLIENT_ID = 1132965128045002
 FENIX_CLIENT_SECRET = "3AZQyZGzlf/I3Q8KIYyH9DXlBlWA38kg+6EUWeCgTT2+3pbi+cx5RjumU/nxgVo2UsoyBWryM2/j3bZ+xnSdPw=="
 CALLBACK_URL = "https://localhost:5100/login/callback"  # This must match the redirect URI set in your OAuth provider
 
+MESSAGE_API_URL = "http://localhost:5010/api"
+MESSAGE_APP_SECRET = "eletrodomesticos_e_computadores_2024"
+
+
 #Sqlalchemy configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///multi.db"
 db = SQLAlchemy()
@@ -106,6 +110,7 @@ def callback():
             try:
                 db.session.add(user)
                 db.session.commit()
+                addUserToMessageApp(username)
                 # Log in the new local user account
                 login_user(user)
             except:
@@ -192,7 +197,26 @@ def get_user_profile():
     }
     return jsonify(user_data), 200
 
-
+def addUserToMessageApp(username):
+    response = requests.post(
+        url=f"{MESSAGE_API_URL}/add_user",
+        json={"username": username,
+              "pwd": MESSAGE_APP_SECRET
+        },
+        headers={"Content-Type": "application/json"}
+    )
+    return response.status_code == 200
+    
+def addFriendToMessageApp(username, friendUsername):
+    response = requests.post(
+        url=f"{MESSAGE_API_URL}/add_friend",
+        json={"username": username,
+              "friend_username": friendUsername,
+              "pwd": MESSAGE_APP_SECRET
+        },
+        headers={"Content-Type": "application/json"}
+    )
+    return response.status_code == 200
 
 if __name__ == "__main__":
     app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)

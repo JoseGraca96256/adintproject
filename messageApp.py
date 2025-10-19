@@ -7,6 +7,9 @@ import datetime
 from flask import jsonify
 from sqlalchemy import ForeignKey
 DATABASE_FILE = "db/messagesdb.sqlite"
+
+MAIN_APP_SECRET = "eletrodomesticos_e_computadores_2024"
+
 db_exists = path.exists(DATABASE_FILE)
 
 engine = create_engine(f"sqlite:///{DATABASE_FILE}", echo=False)
@@ -196,6 +199,58 @@ def getMessagesByReceiver(nick):
     return session.query(Message).filter(Message.receiver_id == receiver_id).all()
 
 #REST API endpoints 
+
+@app.route('/api/add_user', methods=['POST'])
+def api_add_user():
+    data = request.get_json()
+    username = data.get("username")
+    pwd = data.get("pwd")
+    
+    if pwd != MAIN_APP_SECRET:
+        return "Unauthorized", 401
+    
+    if not username:
+        return "Username is required", 400
+    
+    if getUserByUsername(username):
+        return "User already exists", 400
+    
+    new_user = User(username=username)
+    session.add(new_user)
+    session.commit()
+    
+    return "User added successfully", 200
+
+@app.route('/api/add_friend', methods=['POST'])
+def api_add_friend():
+    data = request.get_json()
+    username = data.get("username")
+    friend_username = data.get("friend_username")
+    pwd = data.get("pwd")
+    
+    if pwd != MAIN_APP_SECRET:
+        return "Unauthorized", 401
+    
+    user = getUserByUsername(username)
+    friend = getUserByUsername(friend_username)
+    
+    if not user or not friend:
+        return "User or friend not found", 404
+    
+    # Check if friendship already exists
+    existing_friendship = session.query(Friendship).filter(
+        ((Friendship.user1_id == user.id) & (Friendship.user2_id == friend.id)) |
+        ((Friendship.user1_id == friend.id) & (Friendship.user2_id == user.id))
+    ).first()
+    
+    if existing_friendship:
+        return "Friendship already exists", 400
+    
+    new_friendship = Friendship(user1_id=user.id, user2_id=friend.id)
+    session.add(new_friendship)
+    session.commit()
+    
+    return "Friend added successfully", 200
 
 @app.route('/api/<string:username>/inbox', methods=['GET'])
 def api_inbox(username):

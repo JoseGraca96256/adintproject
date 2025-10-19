@@ -191,6 +191,7 @@
       });
     }
 
+
     $('#showQRBtn').on('click', function() {
       $('#qrcodeDisplay').show();
       $('#qrcodeCanvas').empty();
@@ -209,18 +210,14 @@
 
     function loadFriendsList() {
       $.ajax({
-        url: "/api/friends/list",
+        url: "/api/friends",
         type: "GET",
         success: function(response) {
           const dropdown = $('#friendDropdown');
           dropdown.empty().append('<option value="">Choose a friend...</option>');
-          
           response.friends.forEach(friend => {
             dropdown.append(`<option value="${friend.id}">${friend.name}</option>`);
           });
-          
-          $('.ui.dropdown').dropdown('refresh');
-        },
         error: function() {
           console.error("Failed to load friends list");
         }
