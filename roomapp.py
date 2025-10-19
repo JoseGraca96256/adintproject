@@ -115,7 +115,6 @@ def update_schedule_form():
 
 #project 2 - REST API
 
-
 @app.route('/api/<string:room_name>/schedule', methods=['GET'])
 def api_get_schedule_by_name(room_name):
     room = getRoomByName(room_name)
