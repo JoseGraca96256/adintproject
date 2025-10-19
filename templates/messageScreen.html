@@ -151,8 +151,8 @@
   </div>
 
   <script>
-    let currentUserId = null;
-    let currentFriendId = null;
+    let currentUser = null;
+    let currentFriend = null;
 
     // Initialize
     $(document).ready(function() {
@@ -183,7 +183,7 @@
         url: "/api/user/profile",
         type: "GET",
         success: function(response) {
-          currentUserId = response.userId;
+          currentUser = response.username;
         },
         error: function() {
           console.error("Failed to load user data");
@@ -191,13 +191,14 @@
       });
     }
 
+
     $('#showQRBtn').on('click', function() {
       $('#qrcodeDisplay').show();
       $('#qrcodeCanvas').empty();
       
       // Generate QR code with user ID
       new QRCode(document.getElementById("qrcodeCanvas"), {
-        text: `USER:${currentUserId}`,
+        text: `USER:${currentUser}`,
         width: 200,
         height: 200
       });
@@ -209,17 +210,14 @@
 
     function loadFriendsList() {
       $.ajax({
-        url: "/api/friends/list",
+        url: "/api/friends",
         type: "GET",
         success: function(response) {
           const dropdown = $('#friendDropdown');
           dropdown.empty().append('<option value="">Choose a friend...</option>');
-          
-          response.friends.forEach(friend => {
-            dropdown.append(`<option value="${friend.id}">${friend.name}</option>`);
+          response.forEach(username => {
+            dropdown.append(`<option value="${username}">${username}</option>`);
           });
-          
-          $('.ui.dropdown').dropdown('refresh');
         },
         error: function() {
           console.error("Failed to load friends list");
