@@ -178,7 +178,7 @@ def get_friends_by_id(user_id):
     ).all()
     friends = []
     for friendship in friendships:
-        if friendship.user1 == user_id:
+        if friendship.user1_id == user_id:
             friends.append(friendship.user2)
         else:
             friends.append(friendship.user1)
@@ -204,9 +204,9 @@ def getMessagesByReceiver(nick):
 def api_is_user(username):
     user = getUserByUsername(username)
     if user:
-        return  200
+        return  "ok", 200
     else:
-        return  404  
+        return  "no" , 404  
 
 
 
@@ -271,17 +271,18 @@ def api_delete_user(username):
     session.commit()
     return "User deleted successfully", 200
 
-@app.route('/api/users/<string:username>/friends', methods=['GET'])
+@app.route('/api/<string:username>/friends', methods=['GET'])
 def api_get_friends(username):
     user = getUserByUsername(username)
     if not user:
         return "User not found", 404
     friendsID = get_friends_by_username(username)
     friendsUsername=[]
-    for friendIS in friendsID:
-        friend = session.query(User).filter(User.id == friendIS).first()
+    for friendID in friendsID:
+        friend = session.query(User).filter(User.id == friendID).first()
         friendsUsername.append(friend.username)
-    return jsonify(friendsUsername)
+    print(f"friendsUsername: {friendsUsername}")
+    return jsonify(friendsUsername), 200
     
     
 

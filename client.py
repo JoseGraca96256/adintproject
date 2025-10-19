@@ -158,7 +158,13 @@ def process_qr_data(qr_text):
                 return f"Error fetching schedule ({response.status_code})."
         except Exception as e:
             return f"Error connecting to API: {e}"
-        
+    
+    if qr_text.startswith("USER:"):
+        scanned_username = qr_text.split("USER:")[1]
+        if addFriendToMessageApp(current_user.username, scanned_username):
+            return f"Friend request sent to {scanned_username}."
+        else:
+            return f"Error sending friend request to {scanned_username}."
     else: 
         return "Unrecognized QR code format."
     
