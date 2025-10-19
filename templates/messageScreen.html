@@ -151,8 +151,8 @@
   </div>
 
   <script>
-    let currentUserId = null;
-    let currentFriendId = null;
+    let currentUser = null;
+    let currentFriend = null;
 
     // Initialize
     $(document).ready(function() {
@@ -183,7 +183,7 @@
         url: "/api/user/profile",
         type: "GET",
         success: function(response) {
-          currentUserId = response.userId;
+          currentUser = response.username;
         },
         error: function() {
           console.error("Failed to load user data");
@@ -197,7 +197,7 @@
       
       // Generate QR code with user ID
       new QRCode(document.getElementById("qrcodeCanvas"), {
-        text: `USER:${currentUserId}`,
+        text: `USER:${currentUser}`,
         width: 200,
         height: 200
       });

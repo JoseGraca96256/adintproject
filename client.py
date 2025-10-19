@@ -181,6 +181,19 @@ def logout():
 # hook up extensions to app
 db.init_app(app)
 
+#Miguel's
+
+@app.route("/api/user/profile", methods=["GET"])
+@login_required
+def get_user_profile():
+    user_data = {
+        "username": current_user.username,
+        "name": current_user.name
+    }
+    return jsonify(user_data), 200
+
+
+
 if __name__ == "__main__":
     app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 
