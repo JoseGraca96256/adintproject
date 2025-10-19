@@ -271,6 +271,42 @@ def add_friend():
     else:
         return jsonify({"error": "Failed to add friend"}), 500
     
+@app.route("/api/send_message_resquest", methods=["POST"])
+@login_required
+def send_message_request():
+    data = request.get_json()
+    sender= current_user.username
+    receiver = data.get("receiver")
+    message_text = data.get("message_text")
+    response = requests.post(
+        url=f"{MESSAGE_API_URL}/send_message",
+        json={
+            "sender": sender,
+            "receiver": receiver,
+            "message_text": message_text,
+            "pwd": MESSAGE_APP_SECRET
+        },
+        headers={"Content-Type": "application/json"}
+    )
+    if response.status_code == 200:
+        return jsonify({"message": "Message sent successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to send message"}), 500
+    
+@app.route("/api/chat/<friend_username>", methods=["GET"])
+@login_required
+def get_chat_with_friend(friend_username):
+    current_username = current_user.username
+    response = requests.get(
+        url=f"{MESSAGE_API_URL}/chat/{current_username}/{friend_username}",
+        headers={"Content-Type": "application/json"}
+    )
+    if response.status_code == 200:
+        return response.json(), 200
+    else:
+        return jsonify({"error": "Failed to fetch chat messages"}), 500
+    
+
 
 #################################UTILITY FUNCTIONS####################################
 

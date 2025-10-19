@@ -237,9 +237,9 @@
         $('#sendMessageBtn').prop('disabled', false);
         loadFriendData(friendId);
       } else {
-        currentFriendId = null;
+        currentFriend = null;
         $('#selectedFriend').val('');
-        $('#sendMessageBtn').prop('disabled', true);
+        $('#sendMessageBtn').prop('disabled', false);
         $('#locationInfo').hide();
         $('#messagesContainer').html('<p class="ui grey text">Select a friend to view messages and location</p>');
       }
@@ -255,12 +255,12 @@
       if (!message || !currentFriendId) return;
 
       $.ajax({
-        url: "/api/messages/send",
+        url: "/api/send_message_resquest",
         type: "POST",
         contentType: "application/json",
         data: JSON.stringify({
-          friendId: currentFriendId,
-          message: message
+          receiver: currentFriendId,
+          message_text: message
         }),
         success: function(response) {
           $('#messageText').val('');
@@ -293,10 +293,10 @@
 
       // Load messages
       $.ajax({
-        url: `/api/messages/${friendId}`,
+        url: `/api/chat/${friendId}`,
         type: "GET",
         success: function(response) {
-          displayMessages(response.messages);
+          displayMessages(response);
         },
         error: function() {
           $('#messagesContainer').html('<p class="ui red text">Failed to load messages</p>');
@@ -304,7 +304,8 @@
       });
     }
 
-    function displayMessages(messages) {
+    function displayMessages(response) {
+      const messages = JSON.parse(jsonStr);
       const container = $('#messagesContainer');
       container.empty();
 

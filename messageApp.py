@@ -60,6 +60,9 @@ session = Session()
 def getUserByUsername(username):
     return session.query(User).filter(User.username == username).first()
 
+def admin_list_messages():
+    return session.query(Message).all()
+
 # Data access helpers
 def listMessages():
     username = request.form.get("username")
@@ -99,7 +102,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    messages = listMessages()
+    messages = admin_list_messages()
     # Expect a template 'messageIndex.html' similar to foodAppIndex.html
     # Template context: messages
     return render_template("messageAppIndex.html", messages=messages)
@@ -276,15 +279,30 @@ def api_get_friends(username):
     user = getUserByUsername(username)
     if not user:
         return "User not found", 404
-    friendsID = get_friends_by_username(username)
+    friends = get_friends_by_username(username)
     friendsUsername=[]
-    for friendID in friendsID:
-        friend = session.query(User).filter(User.id == friendID).first()
+    
+    for friend in friends:
+        
         friendsUsername.append(friend.username)
     print(f"friendsUsername: {friendsUsername}")
     return jsonify(friendsUsername), 200
     
+@app.route('/api/send_message', methods=['POST'])
+def api_send_message():
+    data = request.get_json()
+    sender = data.get("sender")
+    receiver = data.get("receiver")
+    content = data.get("content")
     
+    if not (sender and receiver and content):
+        return "Missing fields", 400
+    
+    message_id = addMessage(sender, receiver, content)
+    if message_id is None:
+        return "Sender or receiver not found", 404
+    
+    return 'ok', 200
 
 @app.route('/api/<string:username>/inbox', methods=['GET'])
 def api_inbox(username):
@@ -294,6 +312,29 @@ def api_inbox(username):
         for m in messages
     ]
     return jsonify(result)
+
+@app.route('/api/chat/<string:user_nick>/<string:friend_nick>', methods=['GET'])
+def api_chat(user_nick, friend_nick):
+    user=getUserByUsername(user_nick)
+    friend=getUserByUsername(friend_nick)
+    if not user or not friend:
+        return "User or friend not found", 404
+    messages = session.query(Message).filter(
+        ((Message.sender_id == user.id) & (Message.receiver_id == friend.id)) |
+        ((Message.sender_id == friend.id) & (Message.receiver_id == user.id))
+    ).order_by(Message.created_at).all()
+    result = []
+    for m in messages:
+        message_dict = {
+            'id': m.id,
+            'sender': m.sender_user.username,
+            'receiver': m.receiver_user.username,
+            'content': m.content,
+            'created_at': str(m.created_at)
+        }
+        result.append(message_dict)
+    return jsonify(result)
+
 
 @app.route('/api/<string:username>/sent ', methods=['GET'])
 def api_sent(username):
