@@ -156,9 +156,13 @@ def process_qr_data(qr_text):
         return "Unrecognized QR code format."
     
 
-@app.route("/qrreader")
-def qrreader():
-    return render_template("QRCodeCamera.html")
+@app.route("/qrreaderout")
+def qrreaderout():
+    return render_template("QRCodeCameraOut.html")
+
+@app.route("/qrreaderin")
+def qrreaderin():
+    return render_template("QRCodeCameraIn.html")
 
 
 @app.route("/public_info")
@@ -171,6 +175,17 @@ def public_info():
 
     # Render your main page again, with the info included
     return render_template("loginScreen.html", public_info=message)
+
+@app.route("/private_info")
+def private_info():
+    qr_data = request.args.get("data", None)
+    message = None
+
+    if qr_data:
+        message = process_qr_data(qr_data)
+
+    # Render your main page again, with the info included
+    return render_template("mainScreen.html", private_info=message)
 
 @app.route("/logout")
 @login_required

@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Dashboard</title>
 
-  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
   <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
@@ -19,20 +18,22 @@
       height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start; /* slightly top-centered */
+      flex-direction: column;
       margin: 0;
     }
 
     .main-container {
       background: white;
-      width: 380px;
+      width: 360px; /* 🔥 narrow width like login screen */
       border-radius: 16px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
       padding: 1.5em;
       display: flex;
-      flex-direction: column;
+      flex-direction: column; /* stack elements vertically */
       align-items: center;
       gap: 1.2em;
+      margin: 2em auto; /* center horizontally */
     }
 
     /* Top buttons */
@@ -65,27 +66,67 @@
       color: #666;
       margin-top: 0.5em;
     }
+    .ui.segment {
+      border-radius: 12px !important;
+      margin-bottom: 1.5em !important;
+      padding: 1.5em !important;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ui.segment:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .segment-title {
+      font-size: 1.2em;
+      font-weight: 600;
+      color: #333;
+    }
+    .top-buttons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      gap: 0.5em;
+    }
+
+    .soft-btn {
+      flex: 1;
+      background-color: #f4f6f8 !important;
+      color: #333 !important;
+      border-radius: 10px !important;
+      font-weight: 500;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      border: none !important;
+      padding: 0.8em !important;
+    }
+
+    .soft-btn:hover {
+      background-color: #e9ecef !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+
+    .soft-btn i.icon {
+      color: #2185d0 !important;
+    }    
   </style>
 </head>
 
 <body>
   <div class="main-container">
-    <!-- COMPONENTS 1 & 2 -->
     <div class="top-buttons">
-      <button id="logoutBtn" class="ui red button">
+      <button id="logoutBtn" class="ui button soft-btn">
         <i class="sign out alternate icon"></i> Logout
       </button>
-      <button id="messagesBtn" class="ui blue button">
+      <button id="messagesBtn" class="ui button soft-btn">
         <i class="envelope icon"></i> Messages
       </button>
     </div>
 
     <!-- COMPONENT 3 -->
-    <!-- <div>
-      <h4 class="ui header"><i class="qrcode icon"></i> QR Code Reader</h4>
-      <div id="reader" class="ui segment"></div>
-      <p id="status">Initializing camera...</p>
-    </div> -->
     <div class="ui segment" id="QRContextButton">
       <div class="segment-title"><i class="qrcode icon"></i> QR Code Reader</div>
     </div>
@@ -107,10 +148,73 @@
     </div>
 
     <!-- COMPONENT 5 -->
-    <div class="info-section ui segment">
-      <h4 class="ui header"><i class="info circle icon"></i> Information</h4>
-      <p id="infoText">Scan a QR code to see details here.</p>
-    </div>
+      <div class="ui segment" id="privateInfoBox">
+        <div class="segment-title"><i class="info circle icon"></i> Information</div>
+
+        {% if private_info %}
+          <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
+
+            {% if private_info.type == 'restaurant' %}
+              <!-- Restaurant Information -->
+              <h4 class="ui header">
+                <i class="utensils icon"></i> {{ private_info.name }}
+                <div class="sub header">Restaurant Menu</div>
+              </h4>
+
+              {% if private_info.menu %}
+                <div class="ui relaxed divided list">
+                  {% for item in private_info.menu %}
+                    <div class="item">
+                      <i class="dot circle outline icon teal"></i>
+                      <div class="content">{{ item }}</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p><em>No menu available.</em></p>
+              {% endif %}
+
+            {% elif private_info.type == 'classroom' or private_info.type == 'studyroom' %}
+              <!-- Room Information -->
+              <h4 class="ui header">
+                <i class="chalkboard icon"></i> {{ private_info.name }}
+                <div class="sub header">Room Schedule</div>
+              </h4>
+
+              {% if private_info.schedule %}
+                <table class="ui celled compact teal table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Class</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for entry in private_info.schedule %}
+                      <tr>
+                        <td>{{ entry.time }}</td>
+                        <td>{{ entry.course }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <p><em>No schedule information available.</em></p>
+              {% endif %}
+
+            {% else %}
+              <!-- Fallback -->
+              <p>{{ private_info }}</p>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="ui placeholder segment" style="margin-top: 1em;">
+            <div class="ui icon header">
+              <i class="qrcode icon"></i>
+              Scan a QR code to view information here.
+            </div>
+          </div>
+        {% endif %}
   </div>
 
   <script>
@@ -133,51 +237,9 @@
     // ----------------------------
     // const html5QrCode = new Html5Qrcode("reader");
 
-    // function onScanSuccess(decodedText) {
-    //   console.log("Decoded:", decodedText);
-    //   $('#status').text("QR code detected!");
-
-    //   // Simulate backend query
-    //   $.ajax({
-    //     url: "/qrdata",
-    //     type: "POST",
-    //     contentType: "application/json",
-    //     data: JSON.stringify({ qrcode: decodedText }),
-    //     success: function(response) {
-    //       updateComponents(response);
-    //     },
-    //     error: function() {
-    //       $('#status').text("Error sending QR data to server.");
-    //     }
-    //   });
-    // }
-
-    // function onScanError(err) {
-    //   // Silent scan errors (optional: display if needed)
-    // }
-
-    // Html5Qrcode.getCameras().then(devices => {
-    //   if (devices && devices.length) {
-    //     const cameraId = devices[0].id;
-    //     html5QrCode.start(
-    //       cameraId,
-    //       { fps: 10, qrbox: 250 },
-    //       onScanSuccess,
-    //       onScanError
-    //     ).then(() => {
-    //       $('#status').text("Camera ready — point at a QR code.");
-    //     }).catch(err => {
-    //       $('#status').text("Failed to start camera: " + err);
-    //     });
-    //   } else {
-    //     $('#status').text("No camera found.");
-    //   }
-    // }).catch(err => {
-    //   $('#status').text("Error accessing cameras: " + err);
-    // });
-      $('#QRContextButton').on('click', function() {
-        window.location.href = "/qrreader";
-      });
+    $('#QRContextButton').on('click', function() {
+      window.location.href = "/qrreaderin";
+    });
 
     // ----------------------------
     // COMPONENT 4 + 5 Dynamic Update
@@ -215,5 +277,6 @@
       $('#infoText').html("Action submitted successfully!");
     });
   </script>
+  </div>
 </body>
 </html>

@@ -84,7 +84,7 @@
           <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
 
             {% if public_info.type == 'restaurant' %}
-              <!-- 🥗 Restaurant Information -->
+              <!-- Restaurant Information -->
               <h4 class="ui header">
                 <i class="utensils icon"></i> {{ public_info.name }}
                 <div class="sub header">Restaurant Menu</div>
@@ -104,7 +104,7 @@
               {% endif %}
 
             {% elif public_info.type == 'classroom' or public_info.type == 'studyroom' %}
-              <!-- 🏫 Room Information -->
+              <!-- Room Information -->
               <h4 class="ui header">
                 <i class="chalkboard icon"></i> {{ public_info.name }}
                 <div class="sub header">Room Schedule</div>
@@ -132,7 +132,7 @@
               {% endif %}
 
             {% else %}
-              <!-- 👤 Fallback or User QR -->
+              <!-- Fallback -->
               <p>{{ public_info }}</p>
             {% endif %}
           </div>
@@ -146,18 +146,14 @@
         {% endif %}
       </div>
     <script>
-      // Redirect to Flask endpoints
+      // Flask endpoints
       $('#loginButton').on('click', function() {
         window.location.href = "/login";
       });
 
       $('#QRContextButton').on('click', function() {
-        window.location.href = "/qrreader";
+        window.location.href = "/qrreaderout";
       });
-
-      // $('#publicInfoButton').on('click', function() {
-      //   window.location.href = "/public"; // replace with your actual route
-      // });
 
     </script>
   </body>
