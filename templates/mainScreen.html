@@ -15,7 +15,7 @@
     body {
       background-color: #f9fafb;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: flex-start; /* slightly top-centered */
@@ -134,17 +134,31 @@
     <!-- COMPONENT 4 -->
     <div class="action-form ui segment">
       <h4 class="ui header"><i class="edit icon"></i> Actions</h4>
-      <form id="actionForm" class="ui form">
-        <div class="field">
-          <label>Option 1</label>
-          <input type="text" name="option1" placeholder="Enter value">
-        </div>
-        <div class="field">
-          <label>Option 2</label>
-          <input type="text" name="option2" placeholder="Enter value">
-        </div>
-        <button type="submit" class="ui teal button">Submit</button>
-      </form>
+      <!-- We render actions dynamically into this container -->
+      <div id="actionFormContainer">
+        {% if private_info and private_info.type == 'restaurant' %}
+          <div class="ui form">
+            <button class="ui teal button" id="reserveBtn">
+              <i class="calendar check icon"></i> Reserve Meal
+            </button>
+
+            <div id="ratingSection" class="ui segment dimmed" style="margin-top: 1em;">
+              <div class="field">
+                <label>Rate this restaurant (1–5)</label>
+                <input type="number" id="ratingInput" min="1" max="5" placeholder="Enter rating" disabled>
+              </div>
+              <button class="ui yellow button" id="rateBtn" disabled>
+                <i class="star icon"></i> Submit Rating
+              </button>
+              <div id="rateHint" class="ui tiny grey text" style="margin-top:.5em;">
+                You must reserve before rating.
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <div class="ui tiny message">No actions available for this QR code.</div>
+        {% endif %}
+      </div>
     </div>
 
     <!-- COMPONENT 5 -->
@@ -245,38 +259,205 @@
     // COMPONENT 4 + 5 Dynamic Update
     // ----------------------------
     function updateComponents(data) {
-      // Assume Flask returns { type: "restaurant"|"classroom"|"studyroom"|"user", actions: [...], info: "..." }
-      let info = data.info || "No information available.";
-      let actions = data.actions || [];
+      // Component 5 (Information)
+      const info = data.menu || data.info || "No information available.";
+      $('#infoText').html(`<b>${data.name || ''}</b><br>${info}`);
 
-      $('#infoText').html(info);
+      // Component 4 (Actions)
+      const box = $('#actionFormContainer');
+      box.empty();
 
-      const form = $('#actionForm');
-      form.empty();
+      if (data.type === "restaurant") {
+        // local state: only allow rating after a successful reservation
+        let hasReserved = false;
 
-      if (actions.length > 0) {
-        actions.forEach(a => {
-          form.append(`
+        box.append(`
+          <div class="ui form">
             <div class="field">
-              <label>${a.label}</label>
-              <input type="text" name="${a.name}" placeholder="${a.placeholder || ''}">
+              <label>Select Date & Time</label>
+              <input type="datetime-local" id="reservationDate" />
             </div>
-          `);
+
+            <button class="ui teal button" id="reserveBtn">
+              <i class="calendar check icon"></i> Reserve Meal
+            </button>
+
+            <div id="ratingSection" class="ui segment" style="margin-top: 1em;">
+              <div class="field">
+                <label>Rate this restaurant (1–5)</label>
+                <input type="number" id="ratingInput" min="1" max="5" placeholder="Enter rating">
+              </div>
+              <button class="ui yellow button" id="rateBtn">
+                <i class="star icon"></i> Submit Rating
+              </button>
+              <div id="rateHint" class="ui tiny grey text" style="margin-top:.5em;">
+                You must reserve before rating.
+              </div>
+            </div>
+          </div>
+        `);
+
+        // initially disable rating
+        $('#ratingSection').addClass('dimmed');
+
+        // --- Reserve handler ---
+        $('#reserveBtn').on('click', function () {
+          const selectedDate = $('#reservationDate').val();
+
+          if (!selectedDate) {
+            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please select a date and time before reserving.</span>`);
+            return;
+          }
+
+          $.ajax({
+            url: "/api/user/reserve",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+              restaurant_name: data.name,
+              date: new Date(selectedDate).toISOString()
+            }),
+            success: function (response) {
+              hasReserved = true;
+              $('#infoText').html(`<b>${data.name}</b><br>Reservation confirmed for <b>${new Date(selectedDate).toLocaleString()}</b>.`);
+              $('#reserveBtn').addClass('disabled').text('Meal Reserved');
+              // enable rating section
+              $('#ratingSection').removeClass('dimmed');
+              $('#rateHint').text('You can now submit a rating.');
+            },
+            error: function () {
+              $('#infoText').html("Error making reservation.");
+            }
+          });
         });
-        form.append('<button type="submit" class="ui teal button">Submit</button>');
+
+        // --- Rate handler ---
+        $('#rateBtn').on('click', function () {
+          const rating = Number($('#ratingInput').val());
+          if (!hasReserved) {
+            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">You must reserve before rating this restaurant.</span>`);
+            return;
+          }
+          if (!rating || rating < 1 || rating > 5) {
+            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please enter a rating between 1 and 5.</span>`);
+            return;
+          }
+
+          $.ajax({
+            url: "/api/user/rate",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+              restaurant_name: data.name,
+              rating: rating
+            }),
+            success: function (response) {
+              $('#infoText').html(`<b>${data.name}</b><br>Thank you for rating! ⭐ (${rating}/5)`);
+              $('#rateBtn').addClass('disabled').text('Rated');
+            },
+            error: function () {
+              $('#infoText').html("Error submitting rating.");
+            }
+          });
+        });
       } else {
-        form.html('<p>No available actions for this QR code.</p>');
+        // for non-restaurant QR codes we can clear or inject other actions
+        box.html('<div class="ui tiny message">No actions available for this QR code.</div>');
       }
     }
-
-    // Example: Handle submit (will call Flask later)
-    $('#actionForm').on('submit', function(e) {
-      e.preventDefault();
-      const formData = $(this).serializeArray();
-      console.log("Form submitted:", formData);
-      $('#infoText').html("Action submitted successfully!");
-    });
   </script>
-  </div>
+<script>
+  // Helper: disable/enable rating UI
+  function toggleRating(enabled) {
+    if (enabled) {
+      $('#ratingSection').removeClass('dimmed');
+      $('#ratingInput').prop('disabled', false);
+      $('#rateBtn').prop('disabled', false);
+      $('#rateHint').text('You can now submit a rating.');
+    } else {
+      $('#ratingSection').addClass('dimmed');
+      $('#ratingInput').prop('disabled', true);
+      $('#rateBtn').prop('disabled', true);
+      $('#rateHint').text('You must reserve before rating.');
+    }
+  }
+
+  // Reserve button click
+  $(document).on('click', '#reserveBtn', function() {
+    const restaurantName = "{{ private_info.name if private_info and private_info.type == 'restaurant' else '' }}";
+    if (!restaurantName) return;
+
+    $.ajax({
+      url: "/api/user/reserve",
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify({
+        restaurant_name: restaurantName,
+        date: new Date().toISOString()
+      }),
+      success: function(response) {
+        if (response.message) {
+          $('#privateInfoBox .segment-title').after(`
+            <div class="ui positive message">
+              <i class="check icon"></i> Reservation confirmed for ${restaurantName}.
+            </div>
+          `);
+          $('#reserveBtn').addClass('disabled').text('Meal Reserved');
+          toggleRating(true);
+        } else {
+          $('#privateInfoBox .segment-title').after(`
+            <div class="ui negative message">Error: ${response.error || "Failed to reserve."}</div>
+          `);
+        }
+      },
+      error: function(xhr) {
+        $('#privateInfoBox .segment-title').after(`
+          <div class="ui negative message">Error reserving meal: ${xhr.statusText}</div>
+        `);
+      }
+    });
+  });
+
+  // Rate button click
+  $(document).on('click', '#rateBtn', function() {
+    const restaurantName = "{{ private_info.name if private_info and private_info.type == 'restaurant' else '' }}";
+    const rating = Number($('#ratingInput').val());
+    if (!restaurantName || !rating) {
+      alert("Please enter a rating between 1 and 5.");
+      return;
+    }
+
+    $.ajax({
+      url: "/api/user/rate",
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify({
+        restaurant_name: restaurantName,
+        rating: rating
+      }),
+      success: function(response) {
+        if (response.message) {
+          $('#privateInfoBox .segment-title').after(`
+            <div class="ui yellow message">
+              <i class="star icon"></i> Thank you! You rated ${restaurantName} ${rating}/5.
+            </div>
+          `);
+          $('#rateBtn').addClass('disabled').text('Rated');
+          $('#ratingInput').prop('disabled', true);
+        } else {
+          $('#privateInfoBox .segment-title').after(`
+            <div class="ui negative message">Error: ${response.error || "Failed to rate restaurant."}</div>
+          `);
+        }
+      },
+      error: function(xhr) {
+        $('#privateInfoBox .segment-title').after(`
+          <div class="ui negative message">Error rating restaurant: ${xhr.statusText}</div>
+        `);
+      }
+    });
+  });
+</script>
+</div>
 </body>
 </html>

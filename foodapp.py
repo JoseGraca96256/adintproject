@@ -262,11 +262,12 @@ def api_reserve_table(restaurant_name):
     if restaurant:
         restaurant.nr_reservations += 1
         time = request.get_json('date')['date']
-        new_reservation = Reservation(restaurant_id=restaurant.id, date=datetime.datetime.fromisoformat(time))
+        clean_time = time.replace("Z", "+00:00")  # Fix ISO format
+        new_reservation = Reservation(restaurant_id=restaurant.id, date=datetime.datetime.fromisoformat(clean_time))
         session.add(new_reservation)
         
         session.commit()
-        return jsonify({'message': 'Reservation added successfully', 'total_reservations': restaurant.reservations})
+        return jsonify({'message': 'Reservation added successfully', 'total_reservations': restaurant.nr_reservations})
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
 

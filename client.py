@@ -12,6 +12,8 @@ import requests
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm.exc import NoResultFound
 
+import datetime
+
 # Flask app setup
 app = Flask(__name__)
 
@@ -94,8 +96,6 @@ def callback():
 
     client.parse_request_body_response(json.dumps(token_response.json()))
 
-
-
     userinfo_endpoint = "https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person"
     uri, headers, body = client.add_token(userinfo_endpoint)
     userinfo_response = requests.get(uri, headers=headers, data=body)
@@ -135,15 +135,22 @@ def process_qr_data(qr_text):
         restaurant_name = qr_text.split("restaurant:")[1]
         try:
             response = requests.get(f"http://localhost:5000/api/{restaurant_name}/menu")
-
             if response.status_code == 200:
                 data = response.json()
                 menu = data.get("menu", "No menu found.")
-                return f"Menu for {restaurant_name}: {menu}"
+                return {
+                    "type": "restaurant",
+                    "name": restaurant_name,
+                    "menu": menu,
+                    "actions": [
+                        {"label": "Reserve Meal", "endpoint": "/api/user/reserve"},
+                        {"label": "Rate Restaurant", "endpoint": "/api/user/rate"}
+                    ]
+                }
             else:
-                return f"Error fetching menu ({response.status_code})."
+                return {"error": f"Error fetching menu ({response.status_code})."}
         except Exception as e:
-            return f"Error connecting to API: {e}"
+            return {"error": f"Error connecting to API: {e}"}
 
     if qr_text.startswith("room:"):
         room_name = qr_text.split("room:")[1]
@@ -168,6 +175,30 @@ def process_qr_data(qr_text):
     else: 
         return "Unrecognized QR code format."
     
+def reserveMeal(restaurant_name, date=None):
+    """Reserve a meal at a restaurant."""
+    if not date:
+        date = datetime.datetime.utcnow().isoformat()
+    response = requests.post(
+        url=f"http://localhost:5000/api/reserve/{restaurant_name}",
+        json={"date": date},
+        headers={"Content-Type": "application/json"}
+    )
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": f"Failed to reserve meal ({response.status_code})"}
+    
+
+def rateRestaurant(restaurant_name, rating):
+    """Rate a restaurant by name."""
+    response = requests.get(
+        url=f"http://localhost:5000/api/restaurant/{restaurant_name}/{rating}"
+    )
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": f"Failed to rate restaurant ({response.status_code})"}
 
 @app.route("/qrreaderout")
 def qrreaderout():
@@ -176,7 +207,6 @@ def qrreaderout():
 @app.route("/qrreaderin")
 def qrreaderin():
     return render_template("QRCodeCameraIn.html")
-
 
 @app.route("/public_info")
 def public_info():
@@ -190,6 +220,7 @@ def public_info():
     return render_template("loginScreen.html", public_info=message)
 
 @app.route("/private_info")
+@login_required
 def private_info():
     qr_data = request.args.get("data", None)
     message = None
@@ -306,6 +337,24 @@ def get_chat_with_friend(friend_username):
     else:
         return jsonify({"error": "Failed to fetch chat messages"}), 500
     
+@app.route("/api/user/reserve", methods=["POST"])
+@login_required
+def user_reserve_meal():
+    data = request.get_json()
+    restaurant_name = data.get("restaurant_name")
+    date = data.get("date")
+    result = reserveMeal(restaurant_name, date)
+    return jsonify(result)
+
+@app.route("/api/user/rate", methods=["POST"])
+@login_required
+def user_rate_meal():
+    data = request.get_json()
+    restaurant_name = data.get("restaurant_name")
+    rating = data.get("rating")
+    result = rateRestaurant(restaurant_name, rating)
+    return jsonify(result)
+
 
 
 #################################UTILITY FUNCTIONS####################################
