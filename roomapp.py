@@ -69,6 +69,8 @@ def listRooms():
 def getRoom(roomID):
     return session.query(Room).filter(Room.id == roomID).first()
 
+def getRoomByTecnicoID(tecnicoID):
+    return session.query(Room).filter(Room.tecnico_id == tecnicoID).first()
 def getRoomByName(roomName):
     return session.query(Room).filter(Room.name == roomName).first()
 
@@ -226,6 +228,91 @@ def api_scrape_schedule(room_tecnico_id):
         return jsonify({'message': f"Schedule scraped successfully for room {result['room']}", 'events_added': result['events_added']})
     else:
         return jsonify({'error': f"Failed to scrape schedule: {result['error']}"}), 500
+    
+
+@app.route('/api/room/<int:room_id>/internal_id', methods=['GET'])
+def api_get_events_by_room_id(room_id):
+    room = getRoom(room_id)
+    for event in room.events:
+        print(event.course, event.date, event.start_time, event.end_time)
+    return jsonify({'events': [{'course': event.course, 'date': event.date.isoformat(), 'start_time': event.start_time, 'end_time': event.end_time} for event in room.events]})
+
+@app.route('/api/room/<int:room_tecnico_id>/events', methods=['GET', 'POST','DELETE'])
+def api_get_events_by_room_tecnico_id(room_tecnico_id):
+    if request.method == 'GET':
+        room = getRoomByTecnicoID(room_tecnico_id)
+        for event in room.events:
+            print(event.course, event.date, event.start_time, event.end_time)
+        return jsonify({'events': [{'course': event.course, 'date': event.date.isoformat(), 'start_time': event.start_time, 'end_time': event.end_time} for event in room.events]})
+    if request.method == 'POST':
+        data = request.get_json()
+        course = data.get('course')
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        event_type = data.get('event_type')
+        date_str = data.get('date')
+        date = datetime.datetime.fromisoformat(date_str).date()
+        room = getRoomByTecnicoID(room_tecnico_id)
+        if room:
+            new_event = add_event(course, start_time, end_time, event_type, room.id, date)
+            if room.room_type != 'class':
+                room.room_type = 'class'
+                session.commit()    
+            return jsonify({'message': 'Event added successfully', 'event_id': new_event.id})
+        else:
+            return jsonify({'error': 'Room not found'}), 404
+    if request.method == 'DELETE':
+        data = request.get_json()
+        date_str = data.get('date')
+        date = datetime.datetime.fromisoformat(date_str).date()
+        room = getRoomByTecnicoID(room_tecnico_id)
+        start_time = data.get('start_time')
+        course = data.get('course')
+        if room:
+            event = session.query(Event).filter(Event.room_id == room.id, Event.date == date, Event.start_time == start_time, Event.course == course).first()
+            if event:
+                session.delete(event)
+                session.commit()
+                if not room.events:
+                    room.room_type = 'study'
+                    session.commit()
+                return jsonify({'message': 'Event deleted successfully'})
+            else:
+                return jsonify({'error': 'Event not found'}), 404
+        else:
+            return jsonify({'error': 'Room not found'}), 404
+
+
+@app.route('/api/room/<int:room_tecnico_id>', methods=['GET'])
+def room_info(room_tecnico_id):
+    room = getRoomByTecnicoID(room_tecnico_id)
+    if room:
+        return jsonify({
+            'id': room.id,
+            'name': room.name,
+            'capacity': room.capacity,
+            'schedule': room.schedule,
+            'room_type': room.room_type
+        })
+    else:
+        return jsonify({'error': 'Room not found'}), 404
+    
+@app.route('/api/room/<string:room_name>', methods=['GET'])
+def room_info_by_name(room_name):
+    room = getRoomByName(room_name)
+    if room:
+        return jsonify({
+            'id': room.id,
+            'name': room.name,
+            'capacity': room.capacity,
+            'schedule': room.schedule,
+            'room_type': room.room_type,
+            'tecnico_id': room.tecnico_id
+        })
+    else:
+        return jsonify({'error': 'Room not found'}), 404
+
+
 
 # @app.route('/api/restaurant/<string:restaurant_name>/<int:rating> ', methods=['GET'])
 # def api_update_rating(restaurant_name, rating):
