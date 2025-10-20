@@ -7,6 +7,8 @@ from flask import request, redirect, url_for
 import datetime
 from sqlalchemy.orm import sessionmaker
 from os import path
+import requests
+
 
 from flask import Flask, jsonify
 from flask import render_template
@@ -20,21 +22,42 @@ if path.exists(DATABASE_FILE):
     db_exists = True
     print("\t database already exists")
 
+IST_API_SPACES_URL = 'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/spaces/'
+
 engine = create_engine('sqlite:///%s'%(DATABASE_FILE), echo=False) #echo = True shows all SQL calls
 
 Base = declarative_base()
 
+
 class Room(Base):
     __tablename__ = 'room'
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    tecnico_id = Column(Integer, nullable=False) 
+    name = Column(String,nullable=False)
     capacity = Column(Integer) 
     schedule= Column(String)
+    room_type = Column(String, default='study')
     def __repr__(self):
-        return "<Room(id=%d name='%s', capacity='%d', schedule='%s')>" % (
-                                self.id, self.name, self.capacity, self.schedule)
+        return f"<Room(id={self.id} name='{self.name}', capacity='{self.capacity}', schedule='{self.schedule}', room_type='{self.room_type}')>"
     
-    
+class Event(Base):
+    __tablename__ = 'event'
+    id = Column(Integer, primary_key=True)
+    course= Column(String, nullable=False)
+    start_time= Column(String, nullable=False)
+    end_time= Column(String, nullable=False)
+    event_type = Column(String, default='lecture')
+    room_id = Column(Integer, ForeignKey('room.id'), nullable=False)
+    date = Column(Date, nullable=False)
+    room = relationship ("Room", back_populates="events")
+    def __repr__(self):
+        return f"<Event(id={self.id} room_id='{self.room_id}', date='{self.date}', name='{self.name}')>"
+
+Room.events = relationship(
+    "Event", order_by=Event.date, back_populates="room")
+
+
+
 Base.metadata.create_all(engine) #Create tables for the data models
 
 Session = sessionmaker(bind=engine)
@@ -49,11 +72,11 @@ def getRoom(roomID):
 def getRoomByName(roomName):
     return session.query(Room).filter(Room.name == roomName).first()
 
-def addRoom(name, capacity, schedule):
-    if  not getRoomByName(name):
-        room = Room(name=name, capacity=capacity, schedule=schedule)
-        session.add(room)
-        session.commit()
+def addRoom(name,  tecnico_id, room_type='study', capacity=0, schedule="0"):
+    new_room = Room(name=name, tecnico_id=tecnico_id, room_type=room_type, capacity=capacity, schedule=schedule)
+    session.add(new_room)
+    session.commit()
+    return new_room
 
 def updateSchedule(roomID, newSchedule):
     room = getRoom(roomID)
@@ -64,6 +87,78 @@ def updateSchedule(roomID, newSchedule):
     return False
 
 app = Flask(__name__)
+
+def add_event(course, start_time, end_time, event_type, room_id, date):
+    new_event = Event(course=course, start_time=start_time, end_time=end_time, event_type=event_type, room_id=room_id, date=date)
+    session.add(new_event)
+    session.commit()
+    return new_event
+
+def scrape_schedule_from_web(room_tecnico_id):
+    rest_url= IST_API_SPACES_URL + str(room_tecnico_id) 
+    response= requests.get(
+                            url=rest_url,
+                            headers={"Content-Type": "application/json"}
+                            )
+    if response.status_code == 200:
+        data = response.json()
+        
+        # Get or create room
+        room = getRoomByName(data.get('name'))
+
+        events = data.get('events', [])
+
+        if not events:
+            room_type = 'study'
+        else:
+            room_type = 'class'
+
+        if not room:
+            capacity = data.get('capacity', {}).get('normal', 0)
+            room = addRoom(
+                name=data.get('name'),
+                tecnico_id=int(data.get('id')),
+                room_type=room_type,
+                capacity=capacity
+            )
+        
+        # Parse events
+       
+          
+        for event_data in events:
+            # Parse date from "21/10/2025 10:00" format
+            period = event_data.get('period', {})
+            start_datetime = period.get('start', '')
+            
+            # Convert "21/10/2025 10:00" to datetime
+            try:
+                date_obj = datetime.datetime.strptime(start_datetime.split()[0], '%d/%m/%Y').date()
+            except:
+                continue
+            
+            # Get course info
+            course_info = event_data.get('course', {})
+            if course_info:
+                course_name = f"{course_info.get('acronym', '')} - {course_info.get('name', '')}"
+            else:
+                course_name = event_data.get('title', 'Generic Event')
+            
+            # Add event
+            add_event(
+                course=course_name,
+                start_time=event_data.get('start', ''),
+                end_time=event_data.get('end', ''),
+                event_type=event_data.get('type', 'lesson').lower(),
+                room_id=room.id,
+                date=date_obj
+            )
+        
+        return {'success': True, 'room': room.name, 'events_added': len(events)}
+    else:
+        print(f"Error fetching schedule for room {room_tecnico_id}: {response.status_code}")
+        return {'success': False, 'error': response.status_code}
+
+
 
 @app.route("/")
 def index():
@@ -124,6 +219,14 @@ def api_get_schedule_by_name(room_name):
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
 
+@app.route('/api/scrape/<int:room_tecnico_id>', methods=['GET'])
+def api_scrape_schedule(room_tecnico_id):
+    result = scrape_schedule_from_web(room_tecnico_id)
+    if result['success']:
+        return jsonify({'message': f"Schedule scraped successfully for room {result['room']}", 'events_added': result['events_added']})
+    else:
+        return jsonify({'error': f"Failed to scrape schedule: {result['error']}"}), 500
+
 # @app.route('/api/restaurant/<string:restaurant_name>/<int:rating> ', methods=['GET'])
 # def api_update_rating(restaurant_name, rating):
 #     restaurant = getRoomByName(restaurant_name)
@@ -153,12 +256,14 @@ def api_get_schedule_by_name(room_name):
 
 if __name__ == "__main__":
 
-    if not db_exists:
+    if not db_exists or session.query(Room).count() == 0:
         print("Creating database")
-        addRoom(name="1.1'", capacity=20, schedule="9-20")
-        addRoom(name="1.2", capacity=30, schedule="10-18")
-        addRoom(name="1.3", capacity=22, schedule="10-18")
-    
+        addRoom(name="EA1", tecnico_id=2448131362971, room_type='class')
+        addRoom(name="EA2", tecnico_id=2448131362979, room_type='class')
+        addRoom(name="EA3", tecnico_id=2448131362989, room_type='class')
+
+    #scrape_schedule_from_web(2448131362990)
+
     app.run(port=5001, debug=True)
 
         
