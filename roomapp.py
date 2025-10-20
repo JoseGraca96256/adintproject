@@ -34,6 +34,7 @@ class Room(Base):
         return "<Room(id=%d name='%s', capacity='%d', schedule='%s')>" % (
                                 self.id, self.name, self.capacity, self.schedule)
     
+    
 Base.metadata.create_all(engine) #Create tables for the data models
 
 Session = sessionmaker(bind=engine)
