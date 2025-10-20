@@ -14,10 +14,10 @@
     body {
       background-color: #f9fafb;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       margin: 0;
       padding: 1em;
     }
@@ -126,7 +126,7 @@
         </div>
         <div class="field">
           <label>Message</label>
-          <textarea id="messageText" rows="3" placeholder="Type your message..."></textarea>
+          <textarea id="messageText" rows="2" placeholder="Type your message..."></textarea>
         </div>
         <button type="submit" class="ui primary button" id="sendMessageBtn" disabled>
           <i class="send icon"></i> Send Message
@@ -253,7 +253,7 @@
       
       const message = $('#messageText').val().trim();
       if (!message || !currentFriendId) return;
-
+      console.log("Sending message to:", currentFriendId, "Message:", message);
       $.ajax({
         url: "/api/send_message_resquest",
         type: "POST",
@@ -265,7 +265,7 @@
         success: function(response) {
           $('#messageText').val('');
           loadFriendData(currentFriendId); // Refresh messages
-          alert('Message sent successfully!');
+         
         },
         error: function() {
           alert('Failed to send message');
@@ -278,7 +278,7 @@
     // ----------------------------
     function loadFriendData(friendId) {
       // Load friend location
-      $.ajax({
+      /* $.ajax({
         url: `/api/friends/${friendId}/location`,
         type: "GET",
         success: function(response) {
@@ -289,7 +289,7 @@
           $('#friendLocation').text('Unable to fetch location');
           $('#locationInfo').show();
         }
-      });
+      }); */
 
       // Load messages
       $.ajax({
@@ -305,7 +305,7 @@
     }
 
     function displayMessages(response) {
-      const messages = JSON.parse(jsonStr);
+      const messages = response;
       const container = $('#messagesContainer');
       container.empty();
 
@@ -315,11 +315,19 @@
       }
 
       messages.forEach(msg => {
-        const messageClass = msg.sender === currentUserId ? 'sent' : 'received';
+        const messageClass = msg.sender === currentUser ? 'sent' : 'received';
+       
+        let timestamp = new Date(msg.created_at).toLocaleString('en-GB', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }).replace(',', '');
+
         container.append(`
           <div class="message-item">
-            <strong>${msg.senderName}:</strong> ${msg.text}
-            <div class="ui mini grey text">${msg.timestamp}</div>
+            <strong>${msg.sender}:</strong> ${msg.content}
+            <div class="ui mini grey text">${timestamp}</div>
           </div>
         `);
       });
