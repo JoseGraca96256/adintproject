@@ -283,7 +283,7 @@ def send_message_request():
         json={
             "sender": sender,
             "receiver": receiver,
-            "message_text": message_text,
+            "content": message_text,
             "pwd": MESSAGE_APP_SECRET
         },
         headers={"Content-Type": "application/json"}
