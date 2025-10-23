@@ -255,7 +255,7 @@ def api_update_rating(restaurant_name, rating):
     else:
         return jsonify({'error': 'Restaurant not found'}), 404
     
-@app.route('/api/reserve/<string:restaurant_name>', methods=['POST'])
+@app.route('/api/restaurants/<string:restaurant_name>/reserve', methods=['POST'])
 def api_reserve_table(restaurant_name):
     restaurant = getRestaurantByName(restaurant_name)
     

@@ -180,7 +180,7 @@ def reserveMeal(restaurant_name, date=None):
     if not date:
         date = datetime.datetime.utcnow().isoformat()
     response = requests.post(
-        url=f"http://localhost:5000/api/reserve/{restaurant_name}",
+        url=f"http://localhost:5000/api/restaurants{restaurant_name}/reserve",
         json={"date": date},
         headers={"Content-Type": "application/json"}
     )
