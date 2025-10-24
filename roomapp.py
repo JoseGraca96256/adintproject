@@ -96,6 +96,8 @@ def add_event(course, start_time, end_time, event_type, room_id, date):
     session.commit()
     return new_event
 
+
+
 def scrape_schedule_from_web(room_tecnico_id):
     rest_url= IST_API_SPACES_URL + str(room_tecnico_id) 
     response= requests.get(
@@ -206,6 +208,7 @@ def submit_room():
 def update_schedule_form():
     room_id = request.form.get("roomID")
     new_schedule = request.form.get("newSchedule")
+    name = request.form.get("name")
     if updateSchedule(name, new_schedule):
         return redirect(url_for('index'))
     else:
