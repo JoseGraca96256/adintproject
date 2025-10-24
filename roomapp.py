@@ -219,7 +219,7 @@ def api_get_schedule_by_name(room_name):
     if room:
         return jsonify({'menu': room.schedule})
     else:
-        return jsonify({'error': 'Restaurant not found'}), 404
+        return jsonify({'error': 'Room not found'}), 404
 
 @app.route('/api/scrape/<int:room_tecnico_id>', methods=['GET'])
 def api_scrape_schedule(room_tecnico_id):
