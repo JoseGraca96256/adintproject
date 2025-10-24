@@ -378,6 +378,8 @@ if __name__ == "__main__":
 
     #scrape_schedule_from_web(2448131362990)
     #delete_next_days()
+    
+
     app.run(port=5001, debug=True)
 
         
