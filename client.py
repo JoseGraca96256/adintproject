@@ -225,8 +225,8 @@ def getUserCourses():
         response = requests.get(uri, headers=headers, data=body)
 
         enrolled_courses = response.json().get("enrolments", [])
-        course_names = [course["name"] for course in enrolled_courses]
-        return course_names
+        course_acronym = [course["acronym"] for course in enrolled_courses]
+        return course_acronym
     except:
         return {"error": "Failed to fetch courses"}
         
