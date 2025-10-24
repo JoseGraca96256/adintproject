@@ -10,6 +10,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
           integrity="sha512-uH+vZi8qkUeR7ODD6Emddh3MtC9Zhw+s5KRfV/H0JnQzkFscBBqLU3WtpV5UUoSnQtifpquC5/Wqe7kW7xMUVA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Fomantic UI Calendar plugin
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui-calendar@0.0.8/dist/calendar.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui-calendar@0.0.8/dist/calendar.min.js"></script> -->
+
 
   <style>
     body {
@@ -138,6 +142,44 @@
       <div id="actionFormContainer">
         {% if private_info and private_info.type == 'restaurant' %}
           <div class="ui form">
+            <div class="two fields">
+              <div class="field">
+                <label>Day</label>
+                <select class="ui dropdown" id="daySelect">
+                  {% for d in range(1, 32) %}
+                    <option value="{{ d }}">{{ d }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label>Month</label>
+                <select class="ui dropdown" id="monthSelect">
+                  {% for m in range(1, 13) %}
+                    <option value="{{ m }}">{{ m }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <div class="two fields">
+              <div class="field">
+                <label>Year</label>
+                <select class="ui dropdown" id="yearSelect">
+                  {% for y in range(2025, 2031) %}
+                    <option value="{{ y }}">{{ y }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label>Hour</label>
+                <select class="ui dropdown" id="hourSelect">
+                  {% for h in range(0, 24) %}
+                    <option value="{{ h }}">{{ '%02d:00' % h }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
             <button class="ui teal button" id="reserveBtn">
               <i class="calendar check icon"></i> Reserve Meal
             </button>
@@ -155,6 +197,7 @@
               </div>
             </div>
           </div>
+
         {% else %}
           <div class="ui tiny message">No actions available for this QR code.</div>
         {% endif %}
@@ -275,7 +318,7 @@
           <div class="ui form">
             <div class="field">
               <label>Select Date & Time</label>
-              <input type="datetime-local" id="reservationDate" />
+              <input type="datetime-local" id="reservationDate" min="">
             </div>
 
             <button class="ui teal button" id="reserveBtn">
@@ -285,7 +328,7 @@
             <div id="ratingSection" class="ui segment" style="margin-top: 1em;">
               <div class="field">
                 <label>Rate this restaurant (1–5)</label>
-                <input type="number" id="ratingInput" min="1" max="5" placeholder="Enter rating">
+                <input type="number" id="ratingInput" min="1" max="5" step="1" placeholder="Enter rating">
               </div>
               <button class="ui yellow button" id="rateBtn">
                 <i class="star icon"></i> Submit Rating
@@ -296,18 +339,17 @@
             </div>
           </div>
         `);
-
-        // initially disable rating
-        $('#ratingSection').addClass('dimmed');
+        // set minimum date/time to now
+        const now = new Date().toISOString().slice(0, 16);
+        $('#reservationDate').attr('min', now);
 
         // --- Reserve handler ---
         $('#reserveBtn').on('click', function () {
-          const selectedDate = $('#reservationDate').val();
-
-          if (!selectedDate) {
-            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please select a date and time before reserving.</span>`);
-            return;
-          }
+        const selectedDate = $('#reservationDate').val();
+        if (!selectedDate) {
+          $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please choose a date and time before reserving.</span>`);
+          return;
+        }
 
           $.ajax({
             url: "/api/user/reserve",
@@ -319,9 +361,17 @@
             }),
             success: function (response) {
               hasReserved = true;
-              $('#infoText').html(`<b>${data.name}</b><br>Reservation confirmed for <b>${new Date(selectedDate).toLocaleString()}</b>.`);
+
+              // Add success message under Information section
+              $('#privateInfoBox .segment-title').after(`
+                <div class="ui positive message" style="margin-top:1em;">
+                  <i class="check icon"></i> Reservation confirmed for 
+                  <b>${new Date(selectedDate).toLocaleString()}</b> at ${data.name}.
+                </div>
+              `);
+
+              // Disable the button and enable rating section
               $('#reserveBtn').addClass('disabled').text('Meal Reserved');
-              // enable rating section
               $('#ratingSection').removeClass('dimmed');
               $('#rateHint').text('You can now submit a rating.');
             },
@@ -333,15 +383,16 @@
 
         // --- Rate handler ---
         $('#rateBtn').on('click', function () {
-          const rating = Number($('#ratingInput').val());
           if (!hasReserved) {
             $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">You must reserve before rating this restaurant.</span>`);
             return;
           }
-          if (!rating || rating < 1 || rating > 5) {
-            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please enter a rating between 1 and 5.</span>`);
-            return;
-          }
+          if (!input.checkValidity()) { input.reportValidity(); return; }
+          const rating = Number(input.value);
+          // if (!rating || rating < 1 || rating > 5) {
+          //   $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please enter a rating between 1 and 5.</span>`);
+          //   return;
+          // }
 
           $.ajax({
             url: "/api/user/rate",
@@ -382,44 +433,10 @@
     }
   }
 
-  // Reserve button click
-  $(document).on('click', '#reserveBtn', function() {
-    const restaurantName = "{{ private_info.name if private_info and private_info.type == 'restaurant' else '' }}";
-    if (!restaurantName) return;
-
-    $.ajax({
-      url: "/api/user/reserve",
-      type: "POST",
-      contentType: "application/json",
-      data: JSON.stringify({
-        restaurant_name: restaurantName,
-        date: new Date().toISOString()
-      }),
-      success: function(response) {
-        if (response.message) {
-          $('#privateInfoBox .segment-title').after(`
-            <div class="ui positive message">
-              <i class="check icon"></i> Reservation confirmed for ${restaurantName}.
-            </div>
-          `);
-          $('#reserveBtn').addClass('disabled').text('Meal Reserved');
-          toggleRating(true);
-        } else {
-          $('#privateInfoBox .segment-title').after(`
-            <div class="ui negative message">Error: ${response.error || "Failed to reserve."}</div>
-          `);
-        }
-      },
-      error: function(xhr) {
-        $('#privateInfoBox .segment-title').after(`
-          <div class="ui negative message">Error reserving meal: ${xhr.statusText}</div>
-        `);
-      }
-    });
-  });
-
   // Rate button click
   $(document).on('click', '#rateBtn', function() {
+    const input = document.getElementById('ratingInput');
+    if (!input.checkValidity()) { input.reportValidity(); return; }
     const restaurantName = "{{ private_info.name if private_info and private_info.type == 'restaurant' else '' }}";
     const rating = Number($('#ratingInput').val());
     if (!restaurantName || !rating) {
@@ -457,6 +474,93 @@
       }
     });
   });
+</script>
+<script>
+$(document).ready(function() {
+  // Activate Semantic/Fomantic dropdowns
+  $('.ui.dropdown').dropdown();
+
+  // Handle reserve click
+  $('#reserveBtn').on('click', function() {
+    const restaurantName = "{{ private_info.name if private_info and private_info.type == 'restaurant' else '' }}";
+    const day = $('#daySelect').val();
+    const month = $('#monthSelect').val();
+    const year = $('#yearSelect').val();
+    const hour = $('#hourSelect').val();
+
+    if (!restaurantName) {
+      alert("No restaurant detected.");
+      return;
+    }
+    if (!day || !month || !year || !hour) {
+      alert("Please select day, month, year, and hour.");
+      return;
+    }
+
+    // Combine into ISO date
+    const date = new Date(year, month - 1, day, hour);
+    console.log("Reserving:", restaurantName, "at", date.toISOString());
+
+    $.ajax({
+      url: "/api/user/reserve",
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify({
+        restaurant_name: restaurantName,
+        date: date.toISOString()
+      }),
+      success: function(response) {
+        console.log("Reservation success:", response);
+
+        // show a message below the button (optional)
+        $('.reserve-msg').remove();
+        $('#reserveBtn').after(`
+          <div class="ui positive message reserve-msg" style="margin-top:1em;">
+            <i class="check icon"></i>
+            Reservation confirmed for ${date.toLocaleString()}.
+          </div>
+        `);
+
+        $('#reserveBtn').addClass('disabled').text('Meal Reserved');
+        $('#ratingSection').removeClass('dimmed');
+
+        // ✅ ENABLE the rating UI
+        $('#ratingInput').prop('disabled', false);   // <-- add this
+        $('#rateBtn').prop('disabled', false);       // <-- add this
+
+        $('#rateHint').text('You can now submit a rating.');
+      },
+      error: function(xhr) {
+        console.error("Error:", xhr.statusText);
+        alert("Reservation failed.");
+      }
+    });
+  });
+});
+</script>
+<script>
+// Clamp to 1..5 and keep it integer
+$(document).on('input', '#ratingInput', function () {
+  let v = this.value;
+  // remove non-digits
+  v = v.replace(/[^\d]/g, '');
+  if (v === '') { this.value = ''; return; }
+  let n = parseInt(v, 10);
+  if (isNaN(n)) { this.value = ''; return; }
+  if (n < 1) n = 1;
+  if (n > 5) n = 5;
+  this.value = n;
+});
+
+// Prevent scroll changing the number
+$(document).on('wheel', '#ratingInput', function (e) {
+  this.blur();
+});
+
+// Prevent invalid chars like e, +, -, .
+$(document).on('keydown', '#ratingInput', function (e) {
+  if (['e','E','+','-','.'].includes(e.key)) e.preventDefault();
+});
 </script>
 </div>
 </body>

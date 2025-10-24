@@ -53,14 +53,14 @@ def loginScreen():
     return render_template("loginScreen.html") 
 
 @app.route("/mainScreen")
-@login_required
+# @login_required
 def mainScreen():
     # print(listRooms())
     # rooms = listRooms()
     return render_template("mainScreen.html") 
 
 @app.route("/messages")
-@login_required
+# @login_required
 def messageScreen():
     # print(listRooms())
     # rooms = listRooms()
@@ -180,7 +180,7 @@ def reserveMeal(restaurant_name, date=None):
     if not date:
         date = datetime.datetime.utcnow().isoformat()
     response = requests.post(
-        url=f"http://localhost:5000/api/restaurants{restaurant_name}/reserve",
+        url=f"http://localhost:5000/api/restaurants/{restaurant_name}/reserve",
         json={"date": date},
         headers={"Content-Type": "application/json"}
     )
@@ -220,7 +220,7 @@ def public_info():
     return render_template("loginScreen.html", public_info=message)
 
 @app.route("/private_info")
-@login_required
+# @login_required
 def private_info():
     qr_data = request.args.get("data", None)
     message = None
@@ -232,7 +232,7 @@ def private_info():
     return render_template("mainScreen.html", private_info=message)
 
 @app.route("/logout")
-@login_required
+# @login_required
 def logout():
     logout_user()
     return redirect(url_for("loginScreen"))
@@ -243,7 +243,7 @@ db.init_app(app)
 #Miguel's
 
 @app.route("/api/user/profile", methods=["GET"])
-@login_required
+# @login_required
 def get_user_profile():
     user_data = {
         "username": current_user.username,
@@ -252,7 +252,7 @@ def get_user_profile():
     return jsonify(user_data), 200
 
 @app.route("/api/friends", methods=["GET"])
-@login_required
+# @login_required
 def get_friends_list():
     response = requests.get(
         url=f"{MESSAGE_API_URL}/{current_user.username}/friends",
@@ -292,7 +292,7 @@ def messageAppIsUser(username):
     return response.status_code == 200
 
 @app.route("/api/user/add_friend", methods=["POST"])
-@login_required
+# @login_required
 def add_friend():
     data = request.get_json()
     friend_username = data.get("friend_username")
@@ -303,7 +303,7 @@ def add_friend():
         return jsonify({"error": "Failed to add friend"}), 500
     
 @app.route("/api/send_message_resquest", methods=["POST"])
-@login_required
+# @login_required
 def send_message_request():
     data = request.get_json()
     sender= current_user.username
@@ -325,7 +325,7 @@ def send_message_request():
         return jsonify({"error": "Failed to send message"}), 500
     
 @app.route("/api/chat/<friend_username>", methods=["GET"])
-@login_required
+# @login_required
 def get_chat_with_friend(friend_username):
     current_username = current_user.username
     response = requests.get(
@@ -338,7 +338,7 @@ def get_chat_with_friend(friend_username):
         return jsonify({"error": "Failed to fetch chat messages"}), 500
     
 @app.route("/api/user/reserve", methods=["POST"])
-@login_required
+# @login_required
 def user_reserve_meal():
     data = request.get_json()
     restaurant_name = data.get("restaurant_name")
@@ -347,7 +347,7 @@ def user_reserve_meal():
     return jsonify(result)
 
 @app.route("/api/user/rate", methods=["POST"])
-@login_required
+# @login_required
 def user_rate_meal():
     data = request.get_json()
     restaurant_name = data.get("restaurant_name")
