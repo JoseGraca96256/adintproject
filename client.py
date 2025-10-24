@@ -183,7 +183,7 @@ def process_qr_data(qr_text):
                         start_time=f"{event.get('date')} {event.get('start_time')}",
                         end_time=f"{event.get('date')} {event.get('end_time')}"
                     ))
-                schedule = [{"title": e.title, "start": e.start_time, "end": e.end_time} for e in events]
+                schedule = [{"course": e.title, "start_time": e.start_time, "end_time": e.end_time} for e in events]
                 print(schedule)
                 return schedule
             else:
