@@ -213,7 +213,23 @@ def reserveMeal(restaurant_name, date=None):
         return response.json()
     else:
         return {"error": f"Failed to reserve meal ({response.status_code})"}
+
+@app.route("/user_courses", methods=["GET"])
+@login_required
+def getUserCourses():
     
+    try:
+        
+        courses_endpoint = "https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person/courses"
+        uri, headers, body = client.add_token(courses_endpoint)
+        response = requests.get(uri, headers=headers, data=body)
+
+        enrolled_courses = response.json().get("enrolments", [])
+        course_names = [course["name"] for course in enrolled_courses]
+        return course_names
+    except:
+        return {"error": "Failed to fetch courses"}
+        
 
 def rateRestaurant(restaurant_name, rating):
     """Rate a restaurant by name."""
