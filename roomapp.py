@@ -328,7 +328,18 @@ def room_info_by_name(room_name):
     else:
         return jsonify({'error': 'Room not found'}), 404
 
+#utility fn
 
+def delete_next_days():
+        rooms = listRooms()
+        for room in rooms:
+            date=-1
+            for event in room.events:
+                if date==-1:
+                    date=event.date
+                if event.date>date:
+                    session.delete(event)
+        session.commit()
 
 # @app.route('/api/restaurant/<string:restaurant_name>/<int:rating> ', methods=['GET'])
 # def api_update_rating(restaurant_name, rating):
@@ -366,7 +377,7 @@ if __name__ == "__main__":
         addRoom(name="EA3", tecnico_id=2448131362989, room_type='class')
 
     #scrape_schedule_from_web(2448131362990)
-
+    #delete_next_days()
     app.run(port=5001, debug=True)
 
         
