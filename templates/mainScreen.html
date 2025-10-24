@@ -10,9 +10,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
           integrity="sha512-uH+vZi8qkUeR7ODD6Emddh3MtC9Zhw+s5KRfV/H0JnQzkFscBBqLU3WtpV5UUoSnQtifpquC5/Wqe7kW7xMUVA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <!-- Fomantic UI Calendar plugin
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui-calendar@0.0.8/dist/calendar.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui-calendar@0.0.8/dist/calendar.min.js"></script> -->
 
 
   <style>
@@ -22,25 +19,24 @@
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: flex-start; /* slightly top-centered */
+      align-items: flex-start; 
       flex-direction: column;
       margin: 0;
     }
 
     .main-container {
       background: white;
-      max-width: 40vw; /* narrow width like login screen */
+      max-width: 40vw; 
       border-radius: 16px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
       padding: 1.5em;
       display: flex;
-      flex-direction: column; /* stack elements vertically */
+      flex-direction: column; 
       align-items: center;
       gap: 1.2em;
-      margin: 2em auto; /* center horizontally */
+      margin: 2em auto; 
     }
 
-    /* Top buttons */
     .top-buttons {
       display: flex;
       justify-content: space-between;
@@ -314,7 +310,6 @@
   const $table = $('#roomScheduleTable');
   if (!$table.length) return;
 
-  // Grab "HH:MM" from anything ("18:00", "2025-10-24 18:00", "18:00Z", etc.)
   function toTodayFromAny(s) {
     const m = String(s || '').match(/(\d{1,2}):(\d{2})/);
     if (!m) return null;
@@ -322,27 +317,24 @@
     const min = parseInt(m[2], 10);
     if (isNaN(h) || isNaN(min)) return null;
     const d = new Date();
-    d.setHours(h, min, 0, 0);           // anchor to *today*
+    d.setHours(h, min, 0, 0);           // *today*
     return d;
   }
 
   // Build events from table rows
   const rows = $table.find('tbody tr').map(function(){
     const $tr = $(this);
-    // Prefer the cell with data attributes, fallback to row-level data
     const startStr = $tr.find('.sched-time').data('start') ?? $tr.data('start') ?? '';
     const endStr   = $tr.find('.sched-time').data('end')   ?? $tr.data('end')   ?? '';
     const start = toTodayFromAny(startStr);
     const end   = toTodayFromAny(endStr);
 
-    // Optional: enrollment code (first part of "CODE - Name")
     const courseText = ($tr.find('.sched-course').text() || $tr.find('td:nth-child(2)').text() || '').trim();
     const code = courseText.split(' - ')[0].trim();
 
     return { $tr, start, end, code };
   }).get();
 
-  // Fill "Enrolled" column first (unchanged)
   $.getJSON('/user_courses').done(function(res){
     const list = Array.isArray(res) ? res
                : (Array.isArray(res.courses) ? res.courses
@@ -357,11 +349,9 @@
 
     setStatuses();
   }).fail(function(){
-    // If user courses fails, still set statuses
     setStatuses();
   });
 
-  // Set "Past / Current / Next" for EVERY row using *current clock time* only
   function setStatuses() {
     const now = new Date();
 
@@ -382,7 +372,6 @@
         ev.$tr.addClass('info');
       } else {
         $cell.text('Past Class');
-        // ev.$tr.addClass('warning'); // uncomment if you want visual hint
       }
     });
   }
@@ -418,7 +407,6 @@
       const el = document.getElementById('private-info-json');
       window.PRIVATE_INFO = el ? JSON.parse(el.textContent) : null;
 
-      // Render immediately on page load
       if (window.PRIVATE_INFO) {
         try { updateComponents(window.PRIVATE_INFO); }
         catch (e) { console.error('updateComponents failed:', e); }
@@ -428,40 +416,35 @@
 {% endif %}
 
   <script>
-    // ----------------------------
     // COMPONENT 1: Logout
-    // ----------------------------
+
     $('#logoutBtn').on('click', function() {
       window.location.href = "/logout";
     });
 
-    // ----------------------------
+
     // COMPONENT 2: Messages
-    // ----------------------------
+
     $('#messagesBtn').on('click', function() {
       window.location.href = "/messages";
     });
 
-    // ----------------------------
+
     // COMPONENT 3: QR Code Reader
-    // ----------------------------
-    // const html5QrCode = new Html5Qrcode("reader");
+
 
     $('#QRContextButton').on('click', function() {
       window.location.href = "/qrreaderin";
     });
 
-    // ----------------------------
     // Helpers for classroom flow (ADDED)
-    // ----------------------------
-    // HH:MM -> Date (today, local time)
+
     function hhmmToDate(hhmm) {
       const [h, m] = (hhmm || '00:00').split(':').map(Number);
       const d = new Date();
       d.setHours(h || 0, m || 0, 0, 0);
       return d;
     }
-    // Identify current and next class
     function findCurrentAndNext(list) {
       const now = new Date();
       let current = null;
@@ -473,16 +456,12 @@
       upcoming.sort((a, b) => a._start - b._start);
       return { current, next: current ? null : (upcoming[0] || null) };
     }
-    // Extract course code from "CODE - Name"
     function courseCodeOf(courseStr) {
       return (courseStr || '').split(' - ')[0].trim();
     }
 
-  // ----------------------------
-  // COMPONENT 4 + 5 Dynamic Update  (REPLACE THIS WHOLE FUNCTION)
-  // ----------------------------
+  // COMPONENT 4 + 5 Dynamic Update
   function updateComponents(data) {
-    // Try to infer type if backend didn't send it
     if (data && typeof data === 'object' && !data.type) {
       const looksClassroom =
         Array.isArray(data.events) ||
@@ -493,19 +472,15 @@
       else if (looksRestaurant) data.type = 'restaurant';
     }
 
-    // --- Component 5 ---
-    // Do NOT render any schedule here; the server (Jinja) already renders the
-    // table that includes Enrolled + Status. We keep infoText for optional title only.
+    // Component 5 
     const $info = $('#infoText');
     $info.empty();
     if (data?.name) $info.html(`<b>${data.name}</b>`);
 
-    // --- Component 4 (Actions) ---
-    // IMPORTANT: only touch Actions for CLASSROOM. For restaurant we leave
-    // the server-rendered reservation UI intact so there is only ONE #reserveBtn.
+    //  Component 4 (Actions) 
+
     if (data?.type !== 'classroom') return;
 
-    // Build current/next based on today's clock
     const raw = Array.isArray(data.events) ? data.events
               : Array.isArray(data.schedule) ? data.schedule
               : (Array.isArray(data) ? data : []);
@@ -546,78 +521,64 @@
       </div>
     `);
 
-    // Enable actions only if a class is currently happening
     const canAct = !!current;
     $('#checkinBtnC4,#checkoutBtnC4')
       .toggleClass('disabled', !canAct)
       .prop('disabled', !canAct);
 
-    // Handlers (call your QR-like APIs directly)
     $('#checkinBtnC4').off('click').on('click', function () {
-      $.getJSON('/api/user/profile').done(function (me) {
-        if (!me?.username) {
-          $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
-          return;
+      $.ajax({
+        url: '/api/user/checkin',
+        type: 'POST',
+        contentType: 'application/json',
+        dataType: 'json',
+        data: JSON.stringify({ location: data.name }),
+        success: function (resp) {
+          $('#attMsgC4').html(`
+            <div class="ui positive message">
+              <i class="check icon"></i> ${resp?.message || `Checked-in to <b>${current.course}</b> in <b>${data.name}</b>.`}
+            </div>
+          `);
+        },
+        error: function (xhr) {
+          const err = (xhr.responseJSON && (xhr.responseJSON.error || xhr.responseJSON.message))
+                  || xhr.responseText || xhr.statusText || 'Unknown error';
+          $('#attMsgC4').html(`
+            <div class="ui negative message">
+              <i class="exclamation triangle icon"></i> Check-in failed: ${err}
+            </div>
+          `);
         }
-        $.ajax({
-          url: 'http://localhost:8000/api/checkin',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({ username: me.username, location: data.name }),
-          success: function () {
-            $('#attMsgC4').html(`
-              <div class="ui positive message">
-                <i class="check icon"></i> Checked-in to <b>${current.course}</b> in <b>${data.name}</b>.
-              </div>
-            `);
-          },
-          error: function (xhr) {
-            $('#attMsgC4').html(`
-              <div class="ui negative message">
-                <i class="exclamation triangle icon"></i> Check-in failed: ${xhr.statusText}
-              </div>
-            `);
-          }
-        });
-      }).fail(function () {
-        $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
       });
     });
 
     $('#checkoutBtnC4').off('click').on('click', function () {
-      $.getJSON('/api/user/profile').done(function (me) {
-        if (!me?.username) {
-          $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
-          return;
+      $.ajax({
+        url: '/api/user/checkout',
+        type: 'GET',
+        contentType: 'application/json',
+        dataType: 'json',
+        success: function (resp) {
+          $('#attMsgC4').html(`
+            <div class="ui positive message">
+              <i class="check icon"></i> ${resp?.message || 'Checked-out.'}
+            </div>
+          `);
+        },
+        error: function (xhr) {
+          const err = (xhr.responseJSON && (xhr.responseJSON.error || xhr.responseJSON.message))
+                  || xhr.responseText || xhr.statusText || 'Unknown error';
+          $('#attMsgC4').html(`
+            <div class="ui negative message">
+              <i class="exclamation triangle icon"></i> Check-out failed: ${err}
+            </div>
+          `);
         }
-        $.ajax({
-          url: 'http://localhost:8000/api/checkout',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({ username: me.username }),
-          success: function () {
-            $('#attMsgC4').html(`
-              <div class="ui positive message">
-                <i class="check icon"></i> Checked-out${current ? ` of <b>${current.course}</b>` : ''}.
-              </div>
-            `);
-          },
-          error: function (xhr) {
-            $('#attMsgC4').html(`
-              <div class="ui negative message">
-                <i class="exclamation triangle icon"></i> Check-out failed: ${xhr.statusText}
-              </div>
-            `);
-          }
-        });
-      }).fail(function () {
-        $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
       });
     });
   }
   </script>
 <script>
-  // Helper: disable/enable rating UI
   function toggleRating(enabled) {
     if (enabled) {
       $('#ratingSection').removeClass('dimmed');
@@ -632,7 +593,6 @@
     }
   }
 
-  // Rate button click
   $(document).on('click', '#rateBtn', function() {
     const input = document.getElementById('ratingInput');
     if (!input.checkValidity()) { input.reportValidity(); return; }
@@ -676,16 +636,13 @@
 </script>
 <script>
 $(document).ready(function() {
-  // Activate Semantic/Fomantic dropdowns
   $('.ui.dropdown').dropdown();
 
-    // if backend rendered private_info, render actions now
   if (window.PRIVATE_INFO) {
     try { updateComponents(window.PRIVATE_INFO); } catch(e) { console.warn(e); }
   }
 
 
-  // Handle reserve click
   $('#reserveBtn').on('click', function() {
     const restaurantName = "{{ private_info.name if private_info and private_info.type == 'restaurant' else '' }}";
     const day = $('#daySelect').val();
@@ -702,7 +659,6 @@ $(document).ready(function() {
       return;
     }
 
-    // Combine into ISO date
     const date = new Date(year, month - 1, day, hour);
     console.log("Reserving:", restaurantName, "at", date.toISOString());
 
@@ -717,7 +673,6 @@ $(document).ready(function() {
       success: function(response) {
         console.log("Reservation success:", response);
 
-        // show a message below the button (optional)
         $('.reserve-msg').remove();
         $('#reserveBtn').after(`
           <div class="ui positive message reserve-msg" style="margin-top:1em;">
@@ -729,9 +684,8 @@ $(document).ready(function() {
         $('#reserveBtn').addClass('disabled').text('Meal Reserved');
         $('#ratingSection').removeClass('dimmed');
 
-        // ✅ ENABLE the rating UI
-        $('#ratingInput').prop('disabled', false);   // <-- add this
-        $('#rateBtn').prop('disabled', false);       // <-- add this
+        $('#ratingInput').prop('disabled', false);  
+        $('#rateBtn').prop('disabled', false);    
 
         $('#rateHint').text('You can now submit a rating.');
       },
@@ -744,10 +698,8 @@ $(document).ready(function() {
 });
 </script>
 <script>
-// Clamp to 1..5 and keep it integer
 $(document).on('input', '#ratingInput', function () {
   let v = this.value;
-  // remove non-digits
   v = v.replace(/[^\d]/g, '');
   if (v === '') { this.value = ''; return; }
   let n = parseInt(v, 10);
@@ -757,18 +709,15 @@ $(document).on('input', '#ratingInput', function () {
   this.value = n;
 });
 
-// Prevent scroll changing the number
 $(document).on('wheel', '#ratingInput', function (e) {
   this.blur();
 });
 
-// Prevent invalid chars like e, +, -, .
 $(document).on('keydown', '#ratingInput', function (e) {
   if (['e','E','+','-','.'].includes(e.key)) e.preventDefault();
 });
 </script>
 <script>
-  // Grab "HH:MM" from any date/time string; if two found, return "HH:MM - HH:MM"
   function extractHHMMRange(str) {
     const all = String(str || '').match(/(\d{1,2}:\d{2})/g);
     if (!all || all.length === 0) return '';
@@ -776,7 +725,6 @@ $(document).on('keydown', '#ratingInput', function (e) {
     return `${all[0]} - ${all[1]}`;
   }
 
-  // Rewrite any cells we marked as sched-time to only show HH:MM (or HH:MM - HH:MM)
   function rewriteScheduleTimes(scope) {
     const $scope = scope ? $(scope) : $(document);
     $scope.find('td.sched-time').each(function () {
@@ -784,7 +732,6 @@ $(document).on('keydown', '#ratingInput', function (e) {
     });
   }
 
-  // Run once on page load (for the Jinja-rendered schedule in Component 5)
   $(document).ready(function () {
     rewriteScheduleTimes('#privateInfoBox');
   });

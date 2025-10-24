@@ -440,7 +440,8 @@ def api_user_checkin():
     { "type": "info"|"error", "message"?: str, "error"?: str }
     """
     payload = request.get_json(silent=True) or {}
-    username = (payload.get("username") or "").strip()
+    # username = (payload.get("username") or "").strip()
+    username = current_user.username
     location = (payload.get("location") or "").strip()
 
     if not username or not location:
@@ -471,15 +472,16 @@ def api_user_checkin():
         return jsonify({"type": "error", "error": err_msg}), result.status_code
 
 
-@app.route("/api/user/checkout", methods=["POST"])
+@app.route("/api/user/checkout", methods=["GET"])
 def api_user_checkout():
     """
     Body JSON: { "username": "<user>" }
     Proxies to http://localhost:8000/api/checkout and returns a uniform JSON:
     { "type": "info"|"error", "message"?: str, "error"?: str }
     """
-    payload = request.get_json(silent=True) or {}
-    username = (payload.get("username") or "").strip()
+    # payload = request.get_json(silent=True) or {}
+    # username = (payload.get("username") or "").strip()
+    username = current_user.username
 
     if not username:
         return jsonify({"type": "error", "error": "username is required"}), 400
@@ -488,8 +490,7 @@ def api_user_checkout():
         result = requests.post(
             url="http://localhost:8000/api/checkout",
             json={"username": username},
-            headers={"Content-Type": "application/json"},
-            timeout=10,
+            headers={"Content-Type": "application/json"}
         )
     except Exception as e:
         return jsonify({"type": "error", "error": f"Upstream error: {e}"}), 502

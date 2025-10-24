@@ -98,6 +98,8 @@ def api_checkin():
     request_data = request.get_json()
     username = request_data.get("username")
     location = request_data.get("location")
+    if session.query(CheckIn).filter(CheckIn.username == username).order_by(CheckIn.id.desc()).first().spec == "Checked In":
+        return {"error": "User already checked in."}, 400
     spec = "Checked In"
     checkin = CheckIn(username=username, location=location, spec=spec, date=datetime.date.today())
 
@@ -109,10 +111,12 @@ def api_checkin():
 def api_checkout():
     request_data = request.get_json()
     username = request_data.get("username")
+    if session.query(CheckIn).filter(CheckIn.username == username).order_by(CheckIn.id.desc()).first().spec == "Checked Out":
+        return {"error": "User already checked out."}, 400
     last = session.query(CheckIn).filter(CheckIn.username == username, CheckIn.spec == "Checked In").order_by(CheckIn.id.desc()).first()
     if last is None:
         return {"error": "No check-in record found for this user."}, 404
-    session.delete(last)
+    session.add(CheckIn(username=username, location=last.location, spec="Checked Out", date=datetime.date.today()))
     session.commit()
     return {"message": "Check-out successful!"}, 200
 
