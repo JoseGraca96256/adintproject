@@ -146,105 +146,89 @@ def callback():
 
 def process_qr_data(qr_text):
     """
-    Example QR text: "restaurant:IST_Canteen" or "room:1234"
+    Example QR text:
+      - restaurant:IST_Canteen
+      - room:1234
+      - USER:someusername
+      - checkin:username-location
+      - checkout:username
+    Always return an object with a 'type' key when possible.
     """
+    # --- Restaurant: "restaurant:<name>"
     if qr_text.startswith("restaurant:"):
-        restaurant_name = qr_text.split("restaurant:")[1]
+        restaurant_name = qr_text.split("restaurant:", 1)[1].strip()
         try:
             response = requests.get(f"http://localhost:5000/api/{restaurant_name}/menu")
             if response.status_code == 200:
                 data = response.json()
                 menu = data.get("menu", "No menu found.")
+
+                # Normalize menu to a list so the UI can iterate safely
+                if isinstance(menu, str):
+                    menu_list = [menu]
+                elif isinstance(menu, list):
+                    menu_list = menu
+                else:
+                    menu_list = []
+
                 return {
                     "type": "restaurant",
                     "name": restaurant_name,
-                    "menu": menu,
+                    "menu": menu_list,
                     "actions": [
                         {"label": "Reserve Meal", "endpoint": "/api/user/reserve"},
                         {"label": "Rate Restaurant", "endpoint": "/api/user/rate"}
                     ]
                 }
             else:
-                return {"error": f"Error fetching menu ({response.status_code})."}
+                return {"type": "error", "error": f"Error fetching menu ({response.status_code})."}
         except Exception as e:
-            return {"error": f"Error connecting to API: {e}"}
+            return {"type": "error", "error": f"Error connecting to API: {e}"}
 
+    # --- Classroom: "room:<room_name>"
     if qr_text.startswith("room:"):
-        room_name = qr_text.split("room:")[1]
+        room_name = qr_text.split("room:", 1)[1].strip()
         try:
             response = requests.get(f"http://localhost:5001/api/room/{room_name}/events")
-
             if response.status_code == 200:
                 data = response.json()
+
+                # Accept either {"events":[...]} or {"schedule":[...]}
+                raw_events = data.get("events") or data.get("schedule") or []
                 events = []
-                for event in data.get("events", []):
-                    events.append(Event(
-                        title=event.get("course"),
-                        start_time=f"{event.get('date')} {event.get('start_time')}",
-                        end_time=f"{event.get('date')} {event.get('end_time')}"
-                    ))
-                schedule = [{"course": e.title, "start_time": e.start_time, "end_time": e.end_time} for e in events]
-                print(schedule)
-                return schedule
+                for ev in raw_events:
+                    # Keep HH:MM strings; UI will format/status them
+                    start = ev.get("start_time")
+                    end = ev.get("end_time")
+                    events.append({
+                        "course": ev.get("course"),
+                        "start_time": start,
+                        "end_time": end
+                    })
+
+                # Return a typed payload (also include `schedule` for templates that expect it)
+                return {
+                    "type": "classroom",
+                    "name": room_name,
+                    "events": events,
+                    "schedule": events
+                }
             else:
-                return f"Error fetching schedule ({response.status_code})."
+                return {"type": "error", "error": f"Error fetching schedule ({response.status_code})."}
         except Exception as e:
-            return f"Error connecting to API: {e}"
-    
+            return {"type": "error", "error": f"Error connecting to API: {e}"}
+
+    # --- Add friend: "USER:<username>"
     if qr_text.startswith("USER:"):
-        scanned_username = qr_text.split("USER:")[1]
+        scanned_username = qr_text.split("USER:", 1)[1].strip()
         if addFriendToMessageApp(current_user.username, scanned_username):
-            return f"Friend request sent to {scanned_username}."
+            return {"type": "info", "message": f"Friend request sent to {scanned_username}."}
         else:
-            return f"Error sending friend request to {scanned_username}."
-    
-    if qr_text.startswith("checkin:"):
-        payload = qr_text.split("checkin:", 1)[1]
-        # allow dashes in location: split only on the first '-'
-        if "-" not in payload:
-            return "Invalid check-in QR format. Expected: checkin:username-location"
-        username, location = payload.split("-", 1)
-        username = username.strip()
-        location = location.strip()
+            return {"type": "error", "error": f"Error sending friend request to {scanned_username}."}
 
-        result = requests.post(
-            url="http://localhost:8000/api/checkin",
-            json={"username": username, "location": location},
-            headers={"Content-Type": "application/json"}
-        )
+    # --- Fallback
+    return {"type": "unknown", "raw": qr_text, "error": "Unrecognized QR code format."}
 
-        if result.status_code == 200:
-            now_hhmm = datetime.datetime.now().strftime("%H:%M")
-            return f"✅ Check-in successful for {username} at **{location}** ({now_hhmm})."
-        else:
-            return f"Check-in failed: {result.json().get('error', 'Unknown error')}"
-
-        # # Security: ensure the scanned username matches the logged-in user
-        # if not current_user.is_authenticated or username != current_user.username:
-        #     return f"Check-in denied: QR user '{username}' does not match logged-in user."
-
-        # # Return a simple string that your template shows nicely in Component 5
-        # now_hhmm = datetime.datetime.now().strftime("%H:%M")
-        # return f"✅ Check-in successful for {username} at **{location}** ({now_hhmm})."
-
-    # --- Check-out: "checkout:username"
-    if qr_text.startswith("checkout:"):
-        username = qr_text.split("checkout:", 1)[1].strip()
-
-        result = requests.post(
-            url="http://localhost:8000/api/checkout",
-            json={"username": username},
-            headers={"Content-Type": "application/json"}
-        )
-
-        if result.status_code == 200:
-            now_hhmm = datetime.datetime.now().strftime("%H:%M")
-            return f"✅ Check-out successful for {username} ({now_hhmm})." 
-        else:
-            return f"Check-out failed: {result.json().get('error', 'Unknown error')}"   
-        
-    else: 
-        return "Unrecognized QR code format."
     
 def reserveMeal(restaurant_name, date=None):
     """Reserve a meal at a restaurant."""
@@ -446,38 +430,82 @@ def user_rate_meal():
     result = rateRestaurant(restaurant_name, rating)
     return jsonify(result)
 
+# ---------- Attendance: explicit endpoints the UI can call ----------
 
-@app.route("/api/whereis/<username>", methods=["GET"])
-def whereis(username):
-    print(f"Fetching location for user: {username}")
-    result = requests.get(
-        url=f"http://localhost:8000/api/whereis/{username}",
-        headers={"Content-Type": "application/json"}
-    )
-    
-    print(f"location fetch result: {result.status_code}, {result.text}")
-    if result.status_code == 200:
-        data = result.json()
-        result2 = requests.get(
-            
-            url=f"{ROOM_API_URL}/room/{data.get('location')}",
-            headers={"Content-Type": "application/json"}
+@app.route("/api/user/checkin", methods=["POST"])
+def api_user_checkin():
+    """
+    Body JSON: { "username": "<user>", "location": "<room or place>" }
+    Proxies to http://localhost:8000/api/checkin and returns a uniform JSON:
+    { "type": "info"|"error", "message"?: str, "error"?: str }
+    """
+    payload = request.get_json(silent=True) or {}
+    username = (payload.get("username") or "").strip()
+    location = (payload.get("location") or "").strip()
+
+    if not username or not location:
+        return jsonify({"type": "error", "error": "username and location are required"}), 400
+
+    try:
+        result = requests.post(
+            url="http://localhost:8000/api/checkin",
+            json={"username": username, "location": location},
+            headers={"Content-Type": "application/json"},
+            timeout=10,
         )
-        if result2.status_code == 200:
-            room_data = result2.json()
-            location_name = room_data.get("name", [])
-        
-        room_name=data.get('location')
+    except Exception as e:
+        return jsonify({"type": "error", "error": f"Upstream error: {e}"}), 502
 
-        if location_name:
-            room_name=location_name
+    if result.status_code == 200:
+        now_hhmm = datetime.datetime.now().strftime("%H:%M")
+        return jsonify({
+            "type": "info",
+            "message": f"✅ Check-in successful for {username} at **{location}** ({now_hhmm})."
+        }), 200
+    else:
+        # be defensive if upstream isn't JSON
+        try:
+            err_msg = result.json().get("error", result.text)
+        except Exception:
+            err_msg = result.text
+        return jsonify({"type": "error", "error": err_msg}), result.status_code
 
-        
-        if room_name:
-            return jsonify({"status": "Checked in", "location": room_name}), 200
-        else:
-            return jsonify({"status": "Not checked in"}), 200
 
+@app.route("/api/user/checkout", methods=["POST"])
+def api_user_checkout():
+    """
+    Body JSON: { "username": "<user>" }
+    Proxies to http://localhost:8000/api/checkout and returns a uniform JSON:
+    { "type": "info"|"error", "message"?: str, "error"?: str }
+    """
+    payload = request.get_json(silent=True) or {}
+    username = (payload.get("username") or "").strip()
+
+    if not username:
+        return jsonify({"type": "error", "error": "username is required"}), 400
+
+    try:
+        result = requests.post(
+            url="http://localhost:8000/api/checkout",
+            json={"username": username},
+            headers={"Content-Type": "application/json"},
+            timeout=10,
+        )
+    except Exception as e:
+        return jsonify({"type": "error", "error": f"Upstream error: {e}"}), 502
+
+    if result.status_code == 200:
+        now_hhmm = datetime.datetime.now().strftime("%H:%M")
+        return jsonify({
+            "type": "info",
+            "message": f"✅ Check-out successful for {username} ({now_hhmm})."
+        }), 200
+    else:
+        try:
+            err_msg = result.json().get("error", result.text)
+        except Exception:
+            err_msg = result.text
+        return jsonify({"type": "error", "error": err_msg}), result.status_code
 
 #################################UTILITY FUNCTIONS####################################
 
