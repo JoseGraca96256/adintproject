@@ -35,6 +35,13 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(256), unique=True, nullable=False)
     email = db.Column(db.String(256), unique=True, nullable=False)
 
+
+class Event():
+    def __init__(self, title, start_time, end_time):
+        self.title = title
+        self.start_time = start_time
+        self.end_time = end_time 
+
 # User session management setup
 # https://flask-login.readthedocs.io/en/latest
 login_manager = LoginManager()
@@ -155,12 +162,19 @@ def process_qr_data(qr_text):
     if qr_text.startswith("room:"):
         room_name = qr_text.split("room:")[1]
         try:
-            response = requests.get(f"http://localhost:5001/api/{room_name}/schedule")
+            response = requests.get(f"http://localhost:5001/api/room/{room_name}")
 
             if response.status_code == 200:
                 data = response.json()
-                schedule = data.get("menu", "No menu found.")
-                return f"Menu for {room_name}: {schedule}"
+                events = []
+                for event in data.get("events", []):
+                    events.append(Event(
+                        title=event.get("course"),
+                        start_time=f"{event.get('date')} {event.get('start_time')}",
+                        end_time=f"{event.get('date')} {event.get('end_time')}"
+                    ))
+                schedule = [{"title": e.title, "start": e.start_time, "end": e.end_time} for e in events]
+                return schedule
             else:
                 return f"Error fetching schedule ({response.status_code})."
         except Exception as e:
@@ -240,7 +254,6 @@ def logout():
 # hook up extensions to app
 db.init_app(app)
 
-#Miguel's
 
 @app.route("/api/user/profile", methods=["GET"])
 # @login_required

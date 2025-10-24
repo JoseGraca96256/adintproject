@@ -283,20 +283,36 @@ def api_get_events_by_room_tecnico_id(room_tecnico_id):
             return jsonify({'error': 'Room not found'}), 404
 
 
-@app.route('/api/room/<int:room_tecnico_id>', methods=['GET'])
+@app.route('/api/room/<int:room_tecnico_id>', methods=['GET','POST'])
 def room_info(room_tecnico_id):
-    room = getRoomByTecnicoID(room_tecnico_id)
-    if room:
-        return jsonify({
-            'id': room.id,
-            'name': room.name,
-            'capacity': room.capacity,
-            'schedule': room.schedule,
-            'room_type': room.room_type
-        })
-    else:
-        return jsonify({'error': 'Room not found'}), 404
-    
+    if request.method == 'GET':
+        room = getRoomByTecnicoID(room_tecnico_id)
+        if room:
+            return jsonify({
+                'id': room.id,
+                'name': room.name,
+                'capacity': room.capacity,
+                'schedule': room.schedule,
+                'room_type': room.room_type
+            })
+        else:
+            return jsonify({'error': 'Room not found'}), 404
+        
+    if request.method == 'POST':
+        data = request.get_json()
+        tecnico_id = data.get('tecnico_id')
+        name = data.get('name')
+        capacity = data.get('capacity')
+        schedule = data.get('schedule')
+        if getRoomByTecnicoID(room_tecnico_id):
+            return jsonify({'error': 'Room with this tecnico_id already exists'}), 400
+        if addRoom(name, tecnico_id, capacity=capacity, schedule=schedule):
+            return jsonify({'message': 'Room added successfully'})
+        else:
+            return jsonify({'error': 'Failed to add room'}), 500
+
+
+
 @app.route('/api/room/<string:room_name>', methods=['GET'])
 def room_info_by_name(room_name):
     room = getRoomByName(room_name)
