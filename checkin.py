@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, String, Date
 from sqlalchemy.orm import sessionmaker, declarative_base
-
+import requests
 from flask import Flask, request
 from flask import render_template
 from flask_xmlrpcre.xmlrpcre import *
@@ -91,5 +91,32 @@ def listcheck():
     else:
         return render_template("checkList.html", checks=listChecks())
     
+#rest api
+
+@app.route("/api/checkin", methods=["POST"])
+def api_checkin():
+    request_data = request.get_json()
+    username = request_data.get("username")
+    location = request_data.get("location")
+    spec = "Checked In"
+    checkin = CheckIn(username=username, location=location, spec=spec, date=datetime.date.today())
+
+    session.add(checkin)
+    session.commit()    
+    return {"message": "Check-in successful!"}, 200
+
+@app.route("/api/checkout", methods=["POST"])
+def api_checkout():
+    request_data = request.get_json()
+    username = request_data.get("username")
+    last = session.query(CheckIn).filter(CheckIn.username == username, CheckIn.spec == "Checked In").order_by(CheckIn.id.desc()).first()
+    if last is None:
+        return {"error": "No check-in record found for this user."}, 404
+    session.delete(last)
+    session.commit()
+    return {"message": "Check-out successful!"}, 200
+
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
