@@ -117,6 +117,16 @@ def api_checkout():
     return {"message": "Check-out successful!"}, 200
 
 
+@app.route("/api/whereis/<username>", methods=["GET"])
+def api_whereis(username):
+    last = session.query(CheckIn).filter(CheckIn.username == username).order_by(CheckIn.id.desc()).first()
+    if last is None or last.spec == "Checked Out":
+        return {"status": "Not checked in"}, 200
+    else:
+        return {"status": "Checked in", "location": last.location, "date": str(last.date)}, 200
+    
+    
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
