@@ -23,7 +23,7 @@ CALLBACK_URL = "https://localhost:5100/login/callback"
 
 MESSAGE_API_URL = "http://localhost:5010/api"
 MESSAGE_APP_SECRET = "eletrodomesticos_e_computadores_2024"
-
+ROOM_API_URL = "http://localhost:5001/api"
 
 #Sqlalchemy configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///multi.db"
@@ -446,6 +446,37 @@ def user_rate_meal():
     result = rateRestaurant(restaurant_name, rating)
     return jsonify(result)
 
+
+@app.route("/api/whereis/<username>", methods=["GET"])
+def whereis(username):
+    print(f"Fetching location for user: {username}")
+    result = requests.get(
+        url=f"http://localhost:8000/api/whereis/{username}",
+        headers={"Content-Type": "application/json"}
+    )
+    
+    print(f"location fetch result: {result.status_code}, {result.text}")
+    if result.status_code == 200:
+        data = result.json()
+        result2 = requests.get(
+            
+            url=f"{ROOM_API_URL}/room/{data.get('location')}",
+            headers={"Content-Type": "application/json"}
+        )
+        if result2.status_code == 200:
+            room_data = result2.json()
+            location_name = room_data.get("name", [])
+        
+        room_name=data.get('location')
+
+        if location_name:
+            room_name=location_name
+
+        
+        if room_name:
+            return jsonify({"status": "Checked in", "location": room_name}), 200
+        else:
+            return jsonify({"status": "Not checked in"}), 200
 
 
 #################################UTILITY FUNCTIONS####################################

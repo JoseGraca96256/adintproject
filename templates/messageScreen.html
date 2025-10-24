@@ -278,8 +278,8 @@
     // ----------------------------
     function loadFriendData(friendId) {
       // Load friend location
-      /* $.ajax({
-        url: `/api/friends/${friendId}/location`,
+       $.ajax({
+        url: `/api/whereis/${friendId}`,
         type: "GET",
         success: function(response) {
           $('#friendLocation').text(response.location || 'Unknown');
@@ -289,7 +289,7 @@
           $('#friendLocation').text('Unable to fetch location');
           $('#locationInfo').show();
         }
-      }); */
+      }); 
 
       // Load messages
       $.ajax({
