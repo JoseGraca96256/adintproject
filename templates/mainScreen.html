@@ -408,6 +408,25 @@
   {% endif %}
 </div>
 
+{% if private_info is defined %}
+  <!-- Server data for the client -->
+  <script id="private-info-json" type="application/json">
+    {{ private_info|tojson }}
+  </script>
+  <script>
+    (function () {
+      const el = document.getElementById('private-info-json');
+      window.PRIVATE_INFO = el ? JSON.parse(el.textContent) : null;
+
+      // Render immediately on page load
+      if (window.PRIVATE_INFO) {
+        try { updateComponents(window.PRIVATE_INFO); }
+        catch (e) { console.error('updateComponents failed:', e); }
+      }
+    })();
+  </script>
+{% endif %}
+
   <script>
     // ----------------------------
     // COMPONENT 1: Logout
@@ -459,297 +478,143 @@
       return (courseStr || '').split(' - ')[0].trim();
     }
 
-    // ----------------------------
-    // COMPONENT 4 + 5 Dynamic Update
-    // ----------------------------
-    
-    function updateComponents(data) {
-      // Component 5 (Information)
-      // const info = data.menu || data.info || "No information available.";
-      // $('#infoText').html(`<b>${data.name || ''}</b><br>${info}`);
-      const $info = $('#infoText');
-      $info.empty();
-
-      // Only show text if it's a string, otherwise skip (prevents [object Object])
-      const title = data?.name ? `<b>${data.name}</b>` : '';
-      const text =
-        typeof data?.menu === 'string' ? data.menu :
-        typeof data?.info === 'string' ? data.info : '';
-
-      if (title || text) {
-        $info.html(`${title}${text ? '<br>' + text : ''}`);
-      }
-
-      // If we got a classroom schedule, render it in Component 5
-      const scheduleEvents = Array.isArray(data?.events)
-        ? data.events
-        : (Array.isArray(data) ? data : null); // supports plain array payload
-
-      if (scheduleEvents) {
-        const rows = scheduleEvents.map(ev => `
-          <tr>
-            <td>${ev.start_time}–${ev.end_time}</td>
-            <td>${ev.course}</td>
-          </tr>
-        `).join('') || `<tr><td colspan="2"><em>No events.</em></td></tr>`;
-
-        $info.append(`
-          <h4 class="ui header" style="margin-top:.5em;">
-            <i class="chalkboard icon"></i> ${data?.name || 'Room'}
-            <div class="sub header">Today's schedule</div>
-          </h4>
-          <table class="ui celled compact teal table">
-            <thead><tr><th>Time</th><th>Class</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        `);
-      }
-
-      // Component 4 (Actions)
-      const box = $('#actionFormContainer');
-      box.empty();
-
-      if (data.type === "restaurant") {
-        // local state: only allow rating after a successful reservation
-        let hasReserved = false;
-
-        box.append(`
-          <div class="ui form">
-            <div class="field">
-              <label>Select Date & Time</label>
-              <input type="datetime-local" id="reservationDate" min="">
-            </div>
-
-            <button class="ui teal button" id="reserveBtn">
-              <i class="calendar check icon"></i> Reserve Meal
-            </button>
-
-            <div id="ratingSection" class="ui segment" style="margin-top: 1em;">
-              <div class="field">
-                <label>Rate this restaurant (1–5)</label>
-                <input type="number" id="ratingInput" min="1" max="5" step="1" placeholder="Enter rating">
-              </div>
-              <button class="ui yellow button" id="rateBtn">
-                <i class="star icon"></i> Submit Rating
-              </button>
-              <div id="rateHint" class="ui tiny grey text" style="margin-top:.5em;">
-                You must reserve before rating.
-              </div>
-            </div>
-          </div>
-        `);
-        // set minimum date/time to now
-        const now = new Date().toISOString().slice(0, 16);
-        $('#reservationDate').attr('min', now);
-
-        // --- Reserve handler ---
-        $('#reserveBtn').on('click', function () {
-          const selectedDate = $('#reservationDate').val();
-          if (!selectedDate) {
-            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please choose a date and time before reserving.</span>`);
-            return;
-          }
-
-          $.ajax({
-            url: "/api/user/reserve",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-              restaurant_name: data.name,
-              date: new Date(selectedDate).toISOString()
-            }),
-            success: function (response) {
-              hasReserved = true;
-
-              // Add success message under Information section
-              $('#privateInfoBox .segment-title').after(`
-                <div class="ui positive message" style="margin-top:1em;">
-                  <i class="check icon"></i> Reservation confirmed for 
-                  <b>${new Date(selectedDate).toLocaleString()}</b> at ${data.name}.
-                </div>
-              `);
-
-              // Disable the button and enable rating section
-              $('#reserveBtn').addClass('disabled').text('Meal Reserved');
-              $('#ratingSection').removeClass('dimmed');
-              $('#rateHint').text('You can now submit a rating.');
-            },
-            error: function () {
-              $('#infoText').html("Error making reservation.");
-            }
-          });
-        });
-
-        // --- Rate handler ---
-        $('#rateBtn').on('click', function () {
-          if (!hasReserved) {
-            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">You must reserve before rating this restaurant.</span>`);
-            return;
-          }
-          // ADDED: define input before using it
-          const input = document.getElementById('ratingInput');
-          if (!input.checkValidity()) { input.reportValidity(); return; }
-          const rating = Number(input.value);
-
-          $.ajax({
-            url: "/api/user/rate",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-              restaurant_name: data.name,
-              rating: rating
-            }),
-            success: function (response) {
-              $('#infoText').html(`<b>${data.name}</b><br>Thank you for rating! ⭐ (${rating}/5)`);
-              $('#rateBtn').addClass('disabled').text('Rated');
-            },
-            error: function () {
-              $('#infoText').html("Error submitting rating.");
-            }
-          });
-        });
-
-      } else if (data.type === "classroom") {
-        // ---------- Classroom flow (F4–F8) ADDED ----------
-        // accept data.events or data.schedule
-        const raw = Array.isArray(data.events) ? data.events
-                 : Array.isArray(data.schedule) ? data.schedule
-                 : [];
-
-        // normalize & sort
-        const events = raw.map((ev, i) => {
-          const _start = hhmmToDate(ev.start_time);
-          const _end   = hhmmToDate(ev.end_time);
-          return {
-            ...ev,
-            _start,
-            _end,
-            _id: `${data.name}|${courseCodeOf(ev.course)}|${ev.start_time}-${ev.end_time}|${i}`
-          };
-        }).sort((a, b) => a._start - b._start);
-
-        // Component 4: schedule table
-        const rows = events.map(ev => {
-          const now = new Date();
-          const isCurrent = ev._start <= now && now < ev._end;
-          const rowClass = isCurrent ? 'positive' : '';
-          return `
-            <tr class="${rowClass}" data-class-id="${ev._id}">
-              <td>${ev.course}</td>
-              <td>${ev.start_time}</td>
-              <td>${ev.end_time}</td>
-            </tr>
-          `;
-        }).join('');
-
-        box.html(`
-          <div class="ui form">
-            <h5 class="ui header"><i class="calendar outline icon"></i> Schedule — ${data.name}</h5>
-            <table class="ui celled compact table">
-              <thead><tr><th>Course</th><th>Start</th><th>End</th></tr></thead>
-              <tbody>${rows || '<tr><td colspan="3"><em>No classes found</em></td></tr>'}</tbody>
-            </table>
-            <div id="enrolCheck" class="ui message" style="margin-top:.75em;"></div>
-          </div>
-        `);
-
-        const { current, next } = findCurrentAndNext(events);
-
-        // F5: verify enrollment
-        $.getJSON('/api/user/courses', function(res) {
-          const myCourses = res.courses || [];
-          const setMsg = (html, cls) => {
-            $('#enrolCheck').removeClass('positive negative info').addClass(cls).html(html);
-          };
-
-          if (current) {
-            const mine = myCourses.includes(courseCodeOf(current.course));
-            setMsg(`
-              <i class="${mine ? 'check' : 'exclamation triangle'} icon"></i>
-              ${mine ? 'You are enrolled in' : 'You are NOT enrolled in'} the current class:
-              <b>${current.course}</b> (${current.start_time}–${current.end_time}).
-            `, mine ? 'positive' : 'negative');
-          } else if (next) {
-            const mine = myCourses.includes(courseCodeOf(next.course));
-            setMsg(`
-              <i class="clock outline icon"></i>
-              Next class: <b>${next.course}</b> at ${next.start_time} — ${mine ? 'you are enrolled.' : 'you are not enrolled.'}
-            `, 'info');
-          } else {
-            setMsg(`<i class="info circle icon"></i> No more classes today in this room.`, 'info');
-          }
-
-          // Component 5: Check-in / Check-out (F6, F8)
-          $('#classActions').remove();
-          $('#privateInfoBox .segment-title').after(`
-            <div id="classActions" class="ui segment">
-              <div class="segment-title"><i class="sign in alternate icon"></i> Attendance</div>
-              <div id="classActionMsg" style="margin-bottom:.75em;"></div>
-              <button class="ui green button" id="checkinBtn"><i class="sign in icon"></i> Check-in</button>
-              <button class="ui orange button" id="checkoutBtn"><i class="sign out icon"></i> Check-out</button>
-            </div>
-          `);
-
-          const canAct = !!current;        // enable only during current class
-          const classId = current ? current._id : (next ? next._id : '');
-
-          $('#checkinBtn').toggleClass('disabled', !canAct).prop('disabled', !canAct);
-          $('#checkoutBtn').toggleClass('disabled', !canAct).prop('disabled', !canAct);
-
-          $('#checkinBtn').off('click').on('click', function() {
-            if (!canAct || !classId) return;
-            $.ajax({
-              url: '/api/user/checkin',
-              type: 'POST',
-              contentType: 'application/json',
-              data: JSON.stringify({ room: data.name, class_id: classId }),
-              success: function() {
-                $('#classActionMsg').html(`
-                  <div class="ui positive message">
-                    <i class="check icon"></i> Checked-in to <b>${current.course}</b> (${current.start_time}–${current.end_time}).
-                  </div>
-                `);
-              },
-              error: function(xhr) {
-                $('#classActionMsg').html(`
-                  <div class="ui negative message">
-                    <i class="exclamation triangle icon"></i> Check-in failed: ${xhr.statusText}
-                  </div>
-                `);
-              }
-            });
-          });
-
-          $('#checkoutBtn').off('click').on('click', function() {
-            if (!canAct || !classId) return;
-            $.ajax({
-              url: '/api/user/checkout',
-              type: 'POST',
-              contentType: 'application/json',
-              data: JSON.stringify({ room: data.name, class_id: classId }),
-              success: function() {
-                $('#classActionMsg').html(`
-                  <div class="ui positive message">
-                    <i class="check icon"></i> Checked-out of <b>${current.course}</b>.
-                  </div>
-                `);
-              },
-              error: function(xhr) {
-                $('#classActionMsg').html(`
-                  <div class="ui negative message">
-                    <i class="exclamation triangle icon"></i> Check-out failed: ${xhr.statusText}
-                  </div>
-                `);
-              }
-            });
-          });
-        });
-
-      } else {
-        // for non-restaurant QR codes we can clear or inject other actions
-        box.html('<div class="ui tiny message">No actions available for this QR code.</div>');
-      }
+  // ----------------------------
+  // COMPONENT 4 + 5 Dynamic Update  (REPLACE THIS WHOLE FUNCTION)
+  // ----------------------------
+  function updateComponents(data) {
+    // Try to infer type if backend didn't send it
+    if (data && typeof data === 'object' && !data.type) {
+      const looksClassroom =
+        Array.isArray(data.events) ||
+        Array.isArray(data.schedule) ||
+        (Array.isArray(data) && data.length && (data[0]?.start_time || data[0]?.end_time));
+      const looksRestaurant = Array.isArray(data.menu) || typeof data.menu === 'string';
+      if (looksClassroom) data.type = 'classroom';
+      else if (looksRestaurant) data.type = 'restaurant';
     }
+
+    // --- Component 5 ---
+    // Do NOT render any schedule here; the server (Jinja) already renders the
+    // table that includes Enrolled + Status. We keep infoText for optional title only.
+    const $info = $('#infoText');
+    $info.empty();
+    if (data?.name) $info.html(`<b>${data.name}</b>`);
+
+    // --- Component 4 (Actions) ---
+    // IMPORTANT: only touch Actions for CLASSROOM. For restaurant we leave
+    // the server-rendered reservation UI intact so there is only ONE #reserveBtn.
+    if (data?.type !== 'classroom') return;
+
+    // Build current/next based on today's clock
+    const raw = Array.isArray(data.events) ? data.events
+              : Array.isArray(data.schedule) ? data.schedule
+              : (Array.isArray(data) ? data : []);
+    const toToday = (s) => {
+      const m = String(s||'').match(/(\d{1,2}):(\d{2})/);
+      if (!m) return null;
+      const d = new Date();
+      d.setHours(parseInt(m[1],10)||0, parseInt(m[2],10)||0, 0, 0);
+      return d;
+    };
+    const events = raw.map((ev,i)=>({
+      ...ev,
+      _start: toToday(ev.start_time),
+      _end:   toToday(ev.end_time),
+      _id: `${data.name}|${ev.course}|${ev.start_time}-${ev.end_time}|${i}`
+    })).filter(e=>e._start && e._end).sort((a,b)=>a._start-b._start);
+
+    const now = new Date();
+    const current = events.find(e => e._start <= now && now < e._end) || null;
+    const next    = events.find(e => now < e._start) || null;
+
+    const box = $('#actionFormContainer');
+    box.html(`
+      <div id="attendanceActionsC4" class="ui segment" style="margin-top:.5em;">
+        <div class="segment-title"><i class="sign in alternate icon"></i> Attendance</div>
+        <div id="attMsgC4" style="margin-bottom:.75em;"></div>
+        <button class="ui green button" id="checkinBtnC4"><i class="sign in icon"></i> Check-in</button>
+        <button class="ui orange button" id="checkoutBtnC4"><i class="sign out icon"></i> Check-out</button>
+        <div class="ui tiny grey text" style="margin-top:.5em;">
+          ${
+            current
+              ? `Current class: <b>${current.course}</b> (${current.start_time}–${current.end_time})`
+              : (next
+                  ? `Next class: <b>${next.course}</b> (${next.start_time}–${next.end_time})`
+                  : 'No classes right now.')
+          }
+        </div>
+      </div>
+    `);
+
+    // Enable actions only if a class is currently happening
+    const canAct = !!current;
+    $('#checkinBtnC4,#checkoutBtnC4')
+      .toggleClass('disabled', !canAct)
+      .prop('disabled', !canAct);
+
+    // Handlers (call your QR-like APIs directly)
+    $('#checkinBtnC4').off('click').on('click', function () {
+      $.getJSON('/api/user/profile').done(function (me) {
+        if (!me?.username) {
+          $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
+          return;
+        }
+        $.ajax({
+          url: 'http://localhost:8000/api/checkin',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ username: me.username, location: data.name }),
+          success: function () {
+            $('#attMsgC4').html(`
+              <div class="ui positive message">
+                <i class="check icon"></i> Checked-in to <b>${current.course}</b> in <b>${data.name}</b>.
+              </div>
+            `);
+          },
+          error: function (xhr) {
+            $('#attMsgC4').html(`
+              <div class="ui negative message">
+                <i class="exclamation triangle icon"></i> Check-in failed: ${xhr.statusText}
+              </div>
+            `);
+          }
+        });
+      }).fail(function () {
+        $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
+      });
+    });
+
+    $('#checkoutBtnC4').off('click').on('click', function () {
+      $.getJSON('/api/user/profile').done(function (me) {
+        if (!me?.username) {
+          $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
+          return;
+        }
+        $.ajax({
+          url: 'http://localhost:8000/api/checkout',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ username: me.username }),
+          success: function () {
+            $('#attMsgC4').html(`
+              <div class="ui positive message">
+                <i class="check icon"></i> Checked-out${current ? ` of <b>${current.course}</b>` : ''}.
+              </div>
+            `);
+          },
+          error: function (xhr) {
+            $('#attMsgC4').html(`
+              <div class="ui negative message">
+                <i class="exclamation triangle icon"></i> Check-out failed: ${xhr.statusText}
+              </div>
+            `);
+          }
+        });
+      }).fail(function () {
+        $('#attMsgC4').html('<div class="ui negative message">Could not fetch user profile.</div>');
+      });
+    });
+  }
   </script>
 <script>
   // Helper: disable/enable rating UI
@@ -813,6 +678,12 @@
 $(document).ready(function() {
   // Activate Semantic/Fomantic dropdowns
   $('.ui.dropdown').dropdown();
+
+    // if backend rendered private_info, render actions now
+  if (window.PRIVATE_INFO) {
+    try { updateComponents(window.PRIVATE_INFO); } catch(e) { console.warn(e); }
+  }
+
 
   // Handle reserve click
   $('#reserveBtn').on('click', function() {
