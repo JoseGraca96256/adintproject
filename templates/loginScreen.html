@@ -77,74 +77,128 @@
         <div class="segment-title"><i class="info circle icon"></i> Public Info</div>
       </div> -->
       <!-- Public Info Window -->
-      <div class="ui segment" id="publicInfoBox">
-        <div class="segment-title"><i class="info circle icon"></i> Public Information</div>
+      <!-- Public Info Window -->
+<div class="ui segment" id="publicInfoBox">
+  <div class="segment-title"><i class="info circle icon"></i> Public Information</div>
 
-        {% if public_info %}
-          <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
+  {% if public_info %}
+    <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
 
-            {% if public_info.type == 'restaurant' %}
-              <!-- Restaurant Information -->
-              <h4 class="ui header">
-                <i class="utensils icon"></i> {{ public_info.name }}
-                <div class="sub header">Restaurant Menu</div>
-              </h4>
+      {# --------- Type inference (works even if public_info.type is missing) --------- #}
+      {% set is_mapping  = public_info is mapping %}
+      {% set is_sequence = public_info is sequence and not is_mapping %}
 
-              {% if public_info.menu %}
-                <div class="ui relaxed divided list">
-                  {% for item in public_info.menu %}
-                    <div class="item">
-                      <i class="dot circle outline icon teal"></i>
-                      <div class="content">{{ item }}</div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% else %}
-                <p><em>No menu available.</em></p>
-              {% endif %}
+      {% set has_menu = is_mapping and (public_info.menu is defined and public_info.menu is not none and public_info.menu != '') %}
+      {% set has_events_key = is_mapping and (
+            (public_info.events is defined and public_info.events)
+            or (public_info.schedule is defined and public_info.schedule)
+          ) %}
+      {# plain list like [{"course":..., "start_time":..., "end_time":...}, ...] #}
+      {% set looks_like_events_list = is_sequence
+          and public_info|length > 0
+          and (
+            (public_info[0].start_time is defined)
+            or (public_info[0].end_time is defined)
+            or (public_info[0].time is defined)
+          ) %}
 
-            {% elif public_info.type == 'classroom' or public_info.type == 'studyroom' %}
-              <!-- Room Information -->
-              <h4 class="ui header">
-                <i class="chalkboard icon"></i> {{ public_info.name }}
-                <div class="sub header">Room Schedule</div>
-              </h4>
+      {% set resolved_type = 'unknown' %}
+      {% if is_mapping and public_info.type is defined and public_info.type in ['restaurant','classroom','studyroom'] %}
+        {% set resolved_type = public_info.type %}
+      {% elif has_menu %}
+        {% set resolved_type = 'restaurant' %}
+      {% elif has_events_key or looks_like_events_list %}
+        {% set resolved_type = 'classroom' %}
+      {% endif %}
 
-              {% if public_info.schedule %}
-                <table class="ui celled compact teal table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Class</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for entry in public_info.schedule %}
-                      <tr>
-                        <td>{{ entry.time }}</td>
-                        <td>{{ entry.course }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              {% else %}
-                <p><em>No schedule information available.</em></p>
-              {% endif %}
+      {# ---------------- Restaurant rendering ---------------- #}
+      {% if resolved_type == 'restaurant' %}
+        <h4 class="ui header">
+          <i class="utensils icon"></i> {{ public_info.name if is_mapping and public_info.name is defined else 'Restaurant' }}
+          <div class="sub header">Restaurant Menu</div>
+        </h4>
 
-            {% else %}
-              <!-- Fallback -->
-              <p>{{ public_info }}</p>
-            {% endif %}
-          </div>
-        {% else %}
-          <div class="ui placeholder segment" style="margin-top: 1em;">
-            <div class="ui icon header">
-              <i class="qrcode icon"></i>
-              Scan a QR code to view information here.
+        {% if has_menu %}
+          {# If menu is a string (e.g., "picanha"), render it as a single item; if it's a list, render all #}
+          {% if public_info.menu is string %}
+            <div class="ui relaxed divided list">
+              <div class="item">
+                <i class="dot circle outline icon teal"></i>
+                <div class="content">{{ public_info.menu }}</div>
+              </div>
             </div>
-          </div>
+          {% else %}
+            <div class="ui relaxed divided list">
+              {% for item in public_info.menu %}
+                <div class="item">
+                  <i class="dot circle outline icon teal"></i>
+                  <div class="content">{{ item }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% else %}
+          <p><em>No menu available.</em></p>
         {% endif %}
+
+      {# ---------------- Classroom / Studyroom rendering ---------------- #}
+      {% elif resolved_type in ['classroom','studyroom'] %}
+        <h4 class="ui header">
+          <i class="chalkboard icon"></i> {{ public_info.name if is_mapping and public_info.name is defined else 'Room' }}
+          <div class="sub header">Room Schedule</div>
+        </h4>
+
+        {# Normalize schedule into schedule_list (works for events, schedule, or plain list) #}
+        {% if is_mapping and public_info.schedule is defined %}
+          {% set schedule_list = public_info.schedule %}
+        {% elif is_mapping and public_info.events is defined %}
+          {% set schedule_list = public_info.events %}
+        {% elif looks_like_events_list %}
+          {% set schedule_list = public_info %}
+        {% else %}
+          {% set schedule_list = [] %}
+        {% endif %}
+
+        {% if schedule_list and schedule_list|length > 0 %}
+          <table class="ui celled compact teal table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Class</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in schedule_list %}
+                {% set start = entry.start_time if entry.start_time is defined else '' %}
+                {% set end   = entry.end_time   if entry.end_time   is defined else '' %}
+                {% set time_str = (entry.time if entry.time is defined
+                                   else (start ~ ' - ' ~ end if start and end else '')) %}
+                <tr>
+                  <!-- keep raw values in data- attributes; JS below will trim to HH:MM -->
+                  <td class="sched-time" data-start="{{ start }}" data-end="{{ end }}">{{ time_str }}</td>
+                  <td>{{ entry.course }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p><em>No schedule information available.</em></p>
+        {% endif %}
+
+      {# ---------------- Fallback ---------------- #}
+      {% else %}
+        <p>{{ public_info }}</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="ui placeholder segment" style="margin-top: 1em;">
+      <div class="ui icon header">
+        <i class="qrcode icon"></i>
+        Scan a QR code to view information here.
       </div>
+    </div>
+  {% endif %}
+</div>
     <script>
       // Flask endpoints
       $('#loginButton').on('click', function() {
@@ -156,5 +210,23 @@
       });
 
     </script>
+    <!-- Trim schedule times to HH:MM on render -->
+<script>
+  (function () {
+    const cells = document.querySelectorAll('#publicInfoBox td.sched-time');
+    const toHM = (s) => {
+      if (!s) return '';
+      // If "YYYY-MM-DD HH:MM" or "YYYY-MM-DDTHH:MM:SS" -> keep only HH:MM
+      if (s.includes('T')) return s.split('T')[1].slice(0,5);
+      if (s.includes(' ')) return s.split(' ').pop().slice(0,5);
+      return s.slice(0,5); // already HH:MM
+    };
+    cells.forEach(td => {
+      const s = td.dataset.start || '';
+      const e = td.dataset.end || '';
+      td.textContent = (s && e) ? `${toHM(s)} - ${toHM(e)}` : (toHM(s) || toHM(e) || td.textContent);
+    });
+  })();
+</script>
   </body>
 </html>
