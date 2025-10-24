@@ -221,7 +221,6 @@
             (private_info.events is defined and private_info.events)
             or (private_info.schedule is defined and private_info.schedule)
           ) %}
-      {# plain list like [{"course":..., "start_time":..., "end_time":...}, ...] #}
       {% set looks_like_events_list = is_sequence
           and private_info|length > 0
           and (
@@ -247,18 +246,18 @@
         </h4>
 
         {% if has_menu %}
-          {# Normalize menu: accept string ("picanha" or "picanha,bife") OR list #}
-          {% if private_info.menu is string %}
-            {% set menu_items = private_info.menu.split(',') %}
+          {% set _menu = private_info.menu %}
+          {% if _menu is string %}
+            {% set _menu_list = [_menu] %}
           {% else %}
-            {% set menu_items = private_info.menu %}
+            {% set _menu_list = _menu %}
           {% endif %}
 
           <div class="ui relaxed divided list">
-            {% for item in menu_items %}
+            {% for item in _menu_list %}
               <div class="item">
                 <i class="dot circle outline icon teal"></i>
-                <div class="content">{{ item|trim }}</div>
+                <div class="content">{{ item }}</div>
               </div>
             {% endfor %}
           </div>
@@ -285,11 +284,13 @@
         {% endif %}
 
         {% if schedule_list and schedule_list|length > 0 %}
-          <table class="ui celled compact teal table">
+          <table class="ui celled compact teal table" id="roomScheduleTable">
             <thead>
               <tr>
                 <th>Time</th>
                 <th>Class</th>
+                <th>Enrolled</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -297,15 +298,97 @@
                 {% set start = entry.start_time if entry.start_time is defined else '' %}
                 {% set end   = entry.end_time   if entry.end_time   is defined else '' %}
                 {% set time_str = (entry.time if entry.time is defined
-                                   else (start ~ ' - ' ~ end if start and end else '')) %}
-                <tr>
+                                  else (start ~ ' - ' ~ end if start and end else '')) %}
+                <tr data-start="{{ start }}" data-end="{{ end }}" data-course="{{ entry.course|e }}">
                   <td class="sched-time" data-start="{{ start }}" data-end="{{ end }}">{{ time_str }}</td>
-                  <td>{{ entry.course }}</td>
+                  <td class="sched-course">{{ entry.course }}</td>
+                  <td class="col-enrolled">—</td>
+                  <td class="col-status">—</td>
                 </tr>
               {% endfor %}
             </tbody>
-
           </table>
+
+          <script>
+(function(){
+  const $table = $('#roomScheduleTable');
+  if (!$table.length) return;
+
+  // Grab "HH:MM" from anything ("18:00", "2025-10-24 18:00", "18:00Z", etc.)
+  function toTodayFromAny(s) {
+    const m = String(s || '').match(/(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    const h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    if (isNaN(h) || isNaN(min)) return null;
+    const d = new Date();
+    d.setHours(h, min, 0, 0);           // anchor to *today*
+    return d;
+  }
+
+  // Build events from table rows
+  const rows = $table.find('tbody tr').map(function(){
+    const $tr = $(this);
+    // Prefer the cell with data attributes, fallback to row-level data
+    const startStr = $tr.find('.sched-time').data('start') ?? $tr.data('start') ?? '';
+    const endStr   = $tr.find('.sched-time').data('end')   ?? $tr.data('end')   ?? '';
+    const start = toTodayFromAny(startStr);
+    const end   = toTodayFromAny(endStr);
+
+    // Optional: enrollment code (first part of "CODE - Name")
+    const courseText = ($tr.find('.sched-course').text() || $tr.find('td:nth-child(2)').text() || '').trim();
+    const code = courseText.split(' - ')[0].trim();
+
+    return { $tr, start, end, code };
+  }).get();
+
+  // Fill "Enrolled" column first (unchanged)
+  $.getJSON('/user_courses').done(function(res){
+    const list = Array.isArray(res) ? res
+               : (Array.isArray(res.courses) ? res.courses
+               :  (Array.isArray(res.enrolments) ? res.enrolments : []));
+    const enrolledSet = new Set((list || []).map(String));
+
+    rows.forEach(ev => {
+      const enrolled = enrolledSet.has(ev.code);
+      ev.$tr.find('.col-enrolled').text(enrolled ? 'Enrolled' : 'Not enrolled');
+      ev.$tr.toggleClass('positive', enrolled);
+    });
+
+    setStatuses();
+  }).fail(function(){
+    // If user courses fails, still set statuses
+    setStatuses();
+  });
+
+  // Set "Past / Current / Next" for EVERY row using *current clock time* only
+  function setStatuses() {
+    const now = new Date();
+
+    rows.forEach(ev => {
+      const $cell = ev.$tr.find('.col-status');
+      $cell.text('—').removeClass('positive info warning negative');
+
+      if (!ev.start || !ev.end) {
+        $cell.text('Unknown');
+        return;
+      }
+
+      if (ev.start <= now && now < ev.end) {
+        $cell.text('Current Class');
+        ev.$tr.addClass('positive');
+      } else if (now < ev.start) {
+        $cell.text('Next Class');
+        ev.$tr.addClass('info');
+      } else {
+        $cell.text('Past Class');
+        // ev.$tr.addClass('warning'); // uncomment if you want visual hint
+      }
+    });
+  }
+})();
+</script>
+
         {% else %}
           <p><em>No schedule information available.</em></p>
         {% endif %}
@@ -324,8 +407,6 @@
     </div>
   {% endif %}
 </div>
-
-
 
   <script>
     // ----------------------------

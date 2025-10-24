@@ -217,7 +217,6 @@ def reserveMeal(restaurant_name, date=None):
 @app.route("/user_courses", methods=["GET"])
 @login_required
 def getUserCourses():
-    
     try:
         
         courses_endpoint = "https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person/courses"
