@@ -29,7 +29,7 @@
 
     .main-container {
       background: white;
-      width: 360px; /* 🔥 narrow width like login screen */
+      max-width: 40vw; /* narrow width like login screen */
       border-radius: 16px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
       padding: 1.5em;
@@ -204,75 +204,128 @@
       </div>
     </div>
 
-    <!-- COMPONENT 5 -->
-      <div class="ui segment" id="privateInfoBox">
-        <div class="segment-title"><i class="info circle icon"></i> Information</div>
+<!-- COMPONENT 5 -->
+<div class="ui segment" id="privateInfoBox">
+  <div class="segment-title"><i class="info circle icon"></i> Information</div>
 
-        {% if private_info %}
-          <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
+  <div id="infoText" class="ui basic segment" style="padding:0; margin-top:.75em;"></div>
+  
+  {% if private_info %}
+    <div class="ui segment teal" style="margin-top: 1em; text-align: left;">
+      {# ---------- Infer type when private_info.type is missing ---------- #}
+      {% set is_mapping  = private_info is mapping %}
+      {% set is_sequence = private_info is sequence and not is_mapping %}
 
-            {% if private_info.type == 'restaurant' %}
-              <!-- Restaurant Information -->
-              <h4 class="ui header">
-                <i class="utensils icon"></i> {{ private_info.name }}
-                <div class="sub header">Restaurant Menu</div>
-              </h4>
+      {% set has_menu    = is_mapping and (private_info.menu is defined and private_info.menu) %}
+      {% set has_events_key = is_mapping and (
+            (private_info.events is defined and private_info.events)
+            or (private_info.schedule is defined and private_info.schedule)
+          ) %}
+      {# plain list like [{"course":..., "start_time":..., "end_time":...}, ...] #}
+      {% set looks_like_events_list = is_sequence
+          and private_info|length > 0
+          and (
+            (private_info[0].start_time is defined)
+            or (private_info[0].end_time is defined)
+            or (private_info[0].time is defined)
+          ) %}
 
-              {% if private_info.menu %}
-                <div class="ui relaxed divided list">
-                  {% for item in private_info.menu %}
-                    <div class="item">
-                      <i class="dot circle outline icon teal"></i>
-                      <div class="content">{{ item }}</div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% else %}
-                <p><em>No menu available.</em></p>
-              {% endif %}
+      {% set resolved_type = 'unknown' %}
+      {% if is_mapping and private_info.type is defined and private_info.type in ['restaurant','classroom','studyroom'] %}
+        {% set resolved_type = private_info.type %}
+      {% elif has_menu %}
+        {% set resolved_type = 'restaurant' %}
+      {% elif has_events_key or looks_like_events_list %}
+        {% set resolved_type = 'classroom' %}
+      {% endif %}
 
-            {% elif private_info.type == 'classroom' or private_info.type == 'studyroom' %}
-              <!-- Room Information -->
-              <h4 class="ui header">
-                <i class="chalkboard icon"></i> {{ private_info.name }}
-                <div class="sub header">Room Schedule</div>
-              </h4>
+      {# ---------- Restaurant rendering ---------- #}
+      {% if resolved_type == 'restaurant' %}
+        <h4 class="ui header">
+          <i class="utensils icon"></i> {{ private_info.name if is_mapping and private_info.name is defined else 'Restaurant' }}
+          <div class="sub header">Restaurant Menu</div>
+        </h4>
 
-              {% if private_info.schedule %}
-                <table class="ui celled compact teal table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Class</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for entry in private_info.schedule %}
-                      <tr>
-                        <td>{{ entry.time }}</td>
-                        <td>{{ entry.course }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              {% else %}
-                <p><em>No schedule information available.</em></p>
-              {% endif %}
+        {% if has_menu %}
+          {# Normalize menu: accept string ("picanha" or "picanha,bife") OR list #}
+          {% if private_info.menu is string %}
+            {% set menu_items = private_info.menu.split(',') %}
+          {% else %}
+            {% set menu_items = private_info.menu %}
+          {% endif %}
 
-            {% else %}
-              <!-- Fallback -->
-              <p>{{ private_info }}</p>
-            {% endif %}
+          <div class="ui relaxed divided list">
+            {% for item in menu_items %}
+              <div class="item">
+                <i class="dot circle outline icon teal"></i>
+                <div class="content">{{ item|trim }}</div>
+              </div>
+            {% endfor %}
           </div>
         {% else %}
-          <div class="ui placeholder segment" style="margin-top: 1em;">
-            <div class="ui icon header">
-              <i class="qrcode icon"></i>
-              Scan a QR code to view information here.
-            </div>
-          </div>
+          <p><em>No menu available.</em></p>
         {% endif %}
-  </div>
+
+      {# ---------- Classroom / Studyroom rendering ---------- #}
+      {% elif resolved_type in ['classroom','studyroom'] %}
+        <h4 class="ui header">
+          <i class="chalkboard icon"></i> {{ private_info.name if is_mapping and private_info.name is defined else 'Room' }}
+          <div class="sub header">Room Schedule</div>
+        </h4>
+
+        {# Normalize schedule into schedule_list (works for events, schedule, or plain list) #}
+        {% if is_mapping and private_info.schedule is defined %}
+          {% set schedule_list = private_info.schedule %}
+        {% elif is_mapping and private_info.events is defined %}
+          {% set schedule_list = private_info.events %}
+        {% elif looks_like_events_list %}
+          {% set schedule_list = private_info %}
+        {% else %}
+          {% set schedule_list = [] %}
+        {% endif %}
+
+        {% if schedule_list and schedule_list|length > 0 %}
+          <table class="ui celled compact teal table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Class</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in schedule_list %}
+                {% set start = entry.start_time if entry.start_time is defined else '' %}
+                {% set end   = entry.end_time   if entry.end_time   is defined else '' %}
+                {% set time_str = (entry.time if entry.time is defined
+                                   else (start ~ ' - ' ~ end if start and end else '')) %}
+                <tr>
+                  <td class="sched-time" data-start="{{ start }}" data-end="{{ end }}">{{ time_str }}</td>
+                  <td>{{ entry.course }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        {% else %}
+          <p><em>No schedule information available.</em></p>
+        {% endif %}
+
+      {# ---------- Fallback ---------- #}
+      {% else %}
+        <p>{{ private_info }}</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="ui placeholder segment" style="margin-top: 1em;">
+      <div class="ui icon header">
+        <i class="qrcode icon"></i>
+        Scan a QR code to view information here.
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+
 
   <script>
     // ----------------------------
@@ -299,12 +352,77 @@
     });
 
     // ----------------------------
+    // Helpers for classroom flow (ADDED)
+    // ----------------------------
+    // HH:MM -> Date (today, local time)
+    function hhmmToDate(hhmm) {
+      const [h, m] = (hhmm || '00:00').split(':').map(Number);
+      const d = new Date();
+      d.setHours(h || 0, m || 0, 0, 0);
+      return d;
+    }
+    // Identify current and next class
+    function findCurrentAndNext(list) {
+      const now = new Date();
+      let current = null;
+      const upcoming = [];
+      for (const ev of list) {
+        if (ev._start <= now && now < ev._end) current = ev;
+        else if (ev._start > now) upcoming.push(ev);
+      }
+      upcoming.sort((a, b) => a._start - b._start);
+      return { current, next: current ? null : (upcoming[0] || null) };
+    }
+    // Extract course code from "CODE - Name"
+    function courseCodeOf(courseStr) {
+      return (courseStr || '').split(' - ')[0].trim();
+    }
+
+    // ----------------------------
     // COMPONENT 4 + 5 Dynamic Update
     // ----------------------------
+    
     function updateComponents(data) {
       // Component 5 (Information)
-      const info = data.menu || data.info || "No information available.";
-      $('#infoText').html(`<b>${data.name || ''}</b><br>${info}`);
+      // const info = data.menu || data.info || "No information available.";
+      // $('#infoText').html(`<b>${data.name || ''}</b><br>${info}`);
+      const $info = $('#infoText');
+      $info.empty();
+
+      // Only show text if it's a string, otherwise skip (prevents [object Object])
+      const title = data?.name ? `<b>${data.name}</b>` : '';
+      const text =
+        typeof data?.menu === 'string' ? data.menu :
+        typeof data?.info === 'string' ? data.info : '';
+
+      if (title || text) {
+        $info.html(`${title}${text ? '<br>' + text : ''}`);
+      }
+
+      // If we got a classroom schedule, render it in Component 5
+      const scheduleEvents = Array.isArray(data?.events)
+        ? data.events
+        : (Array.isArray(data) ? data : null); // supports plain array payload
+
+      if (scheduleEvents) {
+        const rows = scheduleEvents.map(ev => `
+          <tr>
+            <td>${ev.start_time}–${ev.end_time}</td>
+            <td>${ev.course}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="2"><em>No events.</em></td></tr>`;
+
+        $info.append(`
+          <h4 class="ui header" style="margin-top:.5em;">
+            <i class="chalkboard icon"></i> ${data?.name || 'Room'}
+            <div class="sub header">Today's schedule</div>
+          </h4>
+          <table class="ui celled compact teal table">
+            <thead><tr><th>Time</th><th>Class</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `);
+      }
 
       // Component 4 (Actions)
       const box = $('#actionFormContainer');
@@ -345,11 +463,11 @@
 
         // --- Reserve handler ---
         $('#reserveBtn').on('click', function () {
-        const selectedDate = $('#reservationDate').val();
-        if (!selectedDate) {
-          $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please choose a date and time before reserving.</span>`);
-          return;
-        }
+          const selectedDate = $('#reservationDate').val();
+          if (!selectedDate) {
+            $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please choose a date and time before reserving.</span>`);
+            return;
+          }
 
           $.ajax({
             url: "/api/user/reserve",
@@ -387,12 +505,10 @@
             $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">You must reserve before rating this restaurant.</span>`);
             return;
           }
+          // ADDED: define input before using it
+          const input = document.getElementById('ratingInput');
           if (!input.checkValidity()) { input.reportValidity(); return; }
           const rating = Number(input.value);
-          // if (!rating || rating < 1 || rating > 5) {
-          //   $('#infoText').html(`<b>${data.name}</b><br><span style="color:#db2828">Please enter a rating between 1 and 5.</span>`);
-          //   return;
-          // }
 
           $.ajax({
             url: "/api/user/rate",
@@ -411,6 +527,143 @@
             }
           });
         });
+
+      } else if (data.type === "classroom") {
+        // ---------- Classroom flow (F4–F8) ADDED ----------
+        // accept data.events or data.schedule
+        const raw = Array.isArray(data.events) ? data.events
+                 : Array.isArray(data.schedule) ? data.schedule
+                 : [];
+
+        // normalize & sort
+        const events = raw.map((ev, i) => {
+          const _start = hhmmToDate(ev.start_time);
+          const _end   = hhmmToDate(ev.end_time);
+          return {
+            ...ev,
+            _start,
+            _end,
+            _id: `${data.name}|${courseCodeOf(ev.course)}|${ev.start_time}-${ev.end_time}|${i}`
+          };
+        }).sort((a, b) => a._start - b._start);
+
+        // Component 4: schedule table
+        const rows = events.map(ev => {
+          const now = new Date();
+          const isCurrent = ev._start <= now && now < ev._end;
+          const rowClass = isCurrent ? 'positive' : '';
+          return `
+            <tr class="${rowClass}" data-class-id="${ev._id}">
+              <td>${ev.course}</td>
+              <td>${ev.start_time}</td>
+              <td>${ev.end_time}</td>
+            </tr>
+          `;
+        }).join('');
+
+        box.html(`
+          <div class="ui form">
+            <h5 class="ui header"><i class="calendar outline icon"></i> Schedule — ${data.name}</h5>
+            <table class="ui celled compact table">
+              <thead><tr><th>Course</th><th>Start</th><th>End</th></tr></thead>
+              <tbody>${rows || '<tr><td colspan="3"><em>No classes found</em></td></tr>'}</tbody>
+            </table>
+            <div id="enrolCheck" class="ui message" style="margin-top:.75em;"></div>
+          </div>
+        `);
+
+        const { current, next } = findCurrentAndNext(events);
+
+        // F5: verify enrollment
+        $.getJSON('/api/user/courses', function(res) {
+          const myCourses = res.courses || [];
+          const setMsg = (html, cls) => {
+            $('#enrolCheck').removeClass('positive negative info').addClass(cls).html(html);
+          };
+
+          if (current) {
+            const mine = myCourses.includes(courseCodeOf(current.course));
+            setMsg(`
+              <i class="${mine ? 'check' : 'exclamation triangle'} icon"></i>
+              ${mine ? 'You are enrolled in' : 'You are NOT enrolled in'} the current class:
+              <b>${current.course}</b> (${current.start_time}–${current.end_time}).
+            `, mine ? 'positive' : 'negative');
+          } else if (next) {
+            const mine = myCourses.includes(courseCodeOf(next.course));
+            setMsg(`
+              <i class="clock outline icon"></i>
+              Next class: <b>${next.course}</b> at ${next.start_time} — ${mine ? 'you are enrolled.' : 'you are not enrolled.'}
+            `, 'info');
+          } else {
+            setMsg(`<i class="info circle icon"></i> No more classes today in this room.`, 'info');
+          }
+
+          // Component 5: Check-in / Check-out (F6, F8)
+          $('#classActions').remove();
+          $('#privateInfoBox .segment-title').after(`
+            <div id="classActions" class="ui segment">
+              <div class="segment-title"><i class="sign in alternate icon"></i> Attendance</div>
+              <div id="classActionMsg" style="margin-bottom:.75em;"></div>
+              <button class="ui green button" id="checkinBtn"><i class="sign in icon"></i> Check-in</button>
+              <button class="ui orange button" id="checkoutBtn"><i class="sign out icon"></i> Check-out</button>
+            </div>
+          `);
+
+          const canAct = !!current;        // enable only during current class
+          const classId = current ? current._id : (next ? next._id : '');
+
+          $('#checkinBtn').toggleClass('disabled', !canAct).prop('disabled', !canAct);
+          $('#checkoutBtn').toggleClass('disabled', !canAct).prop('disabled', !canAct);
+
+          $('#checkinBtn').off('click').on('click', function() {
+            if (!canAct || !classId) return;
+            $.ajax({
+              url: '/api/user/checkin',
+              type: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ room: data.name, class_id: classId }),
+              success: function() {
+                $('#classActionMsg').html(`
+                  <div class="ui positive message">
+                    <i class="check icon"></i> Checked-in to <b>${current.course}</b> (${current.start_time}–${current.end_time}).
+                  </div>
+                `);
+              },
+              error: function(xhr) {
+                $('#classActionMsg').html(`
+                  <div class="ui negative message">
+                    <i class="exclamation triangle icon"></i> Check-in failed: ${xhr.statusText}
+                  </div>
+                `);
+              }
+            });
+          });
+
+          $('#checkoutBtn').off('click').on('click', function() {
+            if (!canAct || !classId) return;
+            $.ajax({
+              url: '/api/user/checkout',
+              type: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ room: data.name, class_id: classId }),
+              success: function() {
+                $('#classActionMsg').html(`
+                  <div class="ui positive message">
+                    <i class="check icon"></i> Checked-out of <b>${current.course}</b>.
+                  </div>
+                `);
+              },
+              error: function(xhr) {
+                $('#classActionMsg').html(`
+                  <div class="ui negative message">
+                    <i class="exclamation triangle icon"></i> Check-out failed: ${xhr.statusText}
+                  </div>
+                `);
+              }
+            });
+          });
+        });
+
       } else {
         // for non-restaurant QR codes we can clear or inject other actions
         box.html('<div class="ui tiny message">No actions available for this QR code.</div>');
@@ -561,6 +814,28 @@ $(document).on('wheel', '#ratingInput', function (e) {
 $(document).on('keydown', '#ratingInput', function (e) {
   if (['e','E','+','-','.'].includes(e.key)) e.preventDefault();
 });
+</script>
+<script>
+  // Grab "HH:MM" from any date/time string; if two found, return "HH:MM - HH:MM"
+  function extractHHMMRange(str) {
+    const all = String(str || '').match(/(\d{1,2}:\d{2})/g);
+    if (!all || all.length === 0) return '';
+    if (all.length === 1) return all[0];
+    return `${all[0]} - ${all[1]}`;
+  }
+
+  // Rewrite any cells we marked as sched-time to only show HH:MM (or HH:MM - HH:MM)
+  function rewriteScheduleTimes(scope) {
+    const $scope = scope ? $(scope) : $(document);
+    $scope.find('td.sched-time').each(function () {
+      $(this).text(extractHHMMRange($(this).text()));
+    });
+  }
+
+  // Run once on page load (for the Jinja-rendered schedule in Component 5)
+  $(document).ready(function () {
+    rewriteScheduleTimes('#privateInfoBox');
+  });
 </script>
 </div>
 </body>
