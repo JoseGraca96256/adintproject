@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 FENIX_CLIENT_ID = 1132965128045002
 FENIX_CLIENT_SECRET = "3AZQyZGzlf/I3Q8KIYyH9DXlBlWA38kg+6EUWeCgTT2+3pbi+cx5RjumU/nxgVo2UsoyBWryM2/j3bZ+xnSdPw=="
-CALLBACK_URL = "https://localhost:5100/login/callback"  # This must match the redirect URI set in your OAuth provider
+CALLBACK_URL = "https://localhost:5100/login/callback"  
 
 MESSAGE_API_URL = "http://localhost:5010/api"
 MESSAGE_APP_SECRET = "eletrodomesticos_e_computadores_2024"
@@ -60,14 +60,14 @@ def loginScreen():
     return render_template("loginScreen.html") 
 
 @app.route("/mainScreen")
-# @login_required
+@login_required
 def mainScreen():
     # print(listRooms())
     # rooms = listRooms()
     return render_template("mainScreen.html") 
 
 @app.route("/messages")
-# @login_required
+@login_required
 def messageScreen():
     # print(listRooms())
     # rooms = listRooms()
@@ -245,7 +245,7 @@ def public_info():
     return render_template("loginScreen.html", public_info=message)
 
 @app.route("/private_info")
-# @login_required
+@login_required
 def private_info():
     qr_data = request.args.get("data", None)
     message = None
@@ -257,7 +257,7 @@ def private_info():
     return render_template("mainScreen.html", private_info=message)
 
 @app.route("/logout")
-# @login_required
+@login_required
 def logout():
     logout_user()
     return redirect(url_for("loginScreen"))
