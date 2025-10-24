@@ -197,6 +197,52 @@ def process_qr_data(qr_text):
             return f"Friend request sent to {scanned_username}."
         else:
             return f"Error sending friend request to {scanned_username}."
+    
+    if qr_text.startswith("checkin:"):
+        payload = qr_text.split("checkin:", 1)[1]
+        # allow dashes in location: split only on the first '-'
+        if "-" not in payload:
+            return "Invalid check-in QR format. Expected: checkin:username-location"
+        username, location = payload.split("-", 1)
+        username = username.strip()
+        location = location.strip()
+
+        result = requests.post(
+            url="http://localhost:8000/api/checkin",
+            json={"username": username, "location": location},
+            headers={"Content-Type": "application/json"}
+        )
+
+        if result.status_code == 200:
+            now_hhmm = datetime.datetime.now().strftime("%H:%M")
+            return f"✅ Check-in successful for {username} at **{location}** ({now_hhmm})."
+        else:
+            return f"Check-in failed: {result.json().get('error', 'Unknown error')}"
+
+        # # Security: ensure the scanned username matches the logged-in user
+        # if not current_user.is_authenticated or username != current_user.username:
+        #     return f"Check-in denied: QR user '{username}' does not match logged-in user."
+
+        # # Return a simple string that your template shows nicely in Component 5
+        # now_hhmm = datetime.datetime.now().strftime("%H:%M")
+        # return f"✅ Check-in successful for {username} at **{location}** ({now_hhmm})."
+
+    # --- Check-out: "checkout:username"
+    if qr_text.startswith("checkout:"):
+        username = qr_text.split("checkout:", 1)[1].strip()
+
+        result = requests.post(
+            url="http://localhost:8000/api/checkout",
+            json={"username": username},
+            headers={"Content-Type": "application/json"}
+        )
+
+        if result.status_code == 200:
+            now_hhmm = datetime.datetime.now().strftime("%H:%M")
+            return f"✅ Check-out successful for {username} ({now_hhmm})." 
+        else:
+            return f"Check-out failed: {result.json().get('error', 'Unknown error')}"   
+        
     else: 
         return "Unrecognized QR code format."
     
