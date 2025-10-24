@@ -47,7 +47,7 @@ class Event():
 login_manager = LoginManager()
 login_manager.init_app(app)
 client = WebApplicationClient(FENIX_CLIENT_ID)
-
+MAflag = True
 # Flask-Login helper to retrieve a user from our db
 @login_manager.user_loader
 def load_user(user_id):
@@ -127,8 +127,18 @@ def callback():
         else:
             user = db.session.query(User).filter(User.username == username).first()
             login_user(user)
-            if not messageAppIsUser(username):
+            MAuser =    messageAppIsUser(username)
+            if MAuser==1:
                 addUserToMessageApp(username)
+                MAflag=True
+            elif MAuser==2:
+                print("Error connecting to Message App")
+                MAflag=False
+            else:
+                MAflag=True
+            
+                
+
         return redirect(url_for("mainScreen"))
     else:
         return "User email not available.", 400
@@ -162,7 +172,7 @@ def process_qr_data(qr_text):
     if qr_text.startswith("room:"):
         room_name = qr_text.split("room:")[1]
         try:
-            response = requests.get(f"http://localhost:5001/api/room/{room_name}")
+            response = requests.get(f"http://localhost:5001/api/room/{room_name}/events")
 
             if response.status_code == 200:
                 data = response.json()
@@ -174,6 +184,7 @@ def process_qr_data(qr_text):
                         end_time=f"{event.get('date')} {event.get('end_time')}"
                     ))
                 schedule = [{"title": e.title, "start": e.start_time, "end": e.end_time} for e in events]
+                print(schedule)
                 return schedule
             else:
                 return f"Error fetching schedule ({response.status_code})."
@@ -298,11 +309,17 @@ def addFriendToMessageApp(username, friendUsername):
     return response.status_code == 200
 
 def messageAppIsUser(username):
-    response = requests.get(
-        url=f"{MESSAGE_API_URL}/User/{username}",
-        headers={"Content-Type": "application/json"}
-    )
-    return response.status_code == 200
+    try:
+        response = requests.get(
+            url=f"{MESSAGE_API_URL}/User/{username}",
+            headers={"Content-Type": "application/json"}
+        )
+        if response.status_code == 200:
+            return 0
+        else:
+            return 1
+    except:
+        return 2
 
 @app.route("/api/user/add_friend", methods=["POST"])
 # @login_required
